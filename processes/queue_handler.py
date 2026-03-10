@@ -1,20 +1,336 @@
 """Module to hande queue population"""
 
+import sys
+import os
+
+import requests
+
+import re
+
 import asyncio
 import json
 import logging
 
+from io import BytesIO
+from openpyxl import load_workbook
+
 from automation_server_client import Workqueue
 
-from helpers import config
+from mbu_dev_shared_components.database.connection import RPAConnection
+
+from mbu_msoffice_integration.sharepoint_class import Sharepoint
+
+from helpers import config, helper_functions, block_handlers
 
 logger = logging.getLogger(__name__)
+
+BLOCK_HEADER_PATTERN = re.compile(r"^Blok\s+([0-9]+(?:\.\s*[0-9]+)?[a-zA-Z]?)")
+
+citizen_data = {
+    "barnets_fulde_navn": "Kasper Hansentest",
+
+    "barnets_cpr": "230115-5000",
+
+    "status": "aktiv",
+
+    "folkeregisteraddresse": "Gade 1, 8000 Aarhus C",
+
+    "skole": "Langagerskolen",
+
+    "skolematrikel": "Kolt Østervej 45",
+
+    "gaaafstand_km": "10",
+
+    "klasseart": "modtagerklasse",
+
+    "klassebetegnelse": "M1",
+
+    "personligt_klassetrin": "2",
+
+    "sfo": "SFO - Holme skole",
+
+    "bopaelsdistrikt": "Holme skole",
+
+    "sagsbehandlingsdato": "26-11-2025",
+
+    "adresse_for_bevilling": "Gade 1, 8000 Aarhus C",
+
+    "hjaelpemidler": "Kørestol, Magnetsele",
+
+    "afstandskriterie_dato": "01-07-2026",
+
+    "afstandskriterie_klassetrin": "3",
+
+    "ansoeger_relation": "Forældremyndighed",
+
+    "revurdering": "30-06-2026",
+
+    "befordringsudvalg": "30-06-2026",
+
+    "hjemmel": "§ 26, stk. 1 afstand",
+
+    "afgoerelsesbrev": "Bevilling: § 26, stk. 1, nr. 1 (afstand)",
+
+    "sagsbehandler": "Sofie Elrum",
+
+    "ppr_ansvarlig": "Klaus",
+
+    "koerselsraekker": {
+        "rutekoersel": {
+            "tidspunkt": "Morgen",
+            "koerselstype_tillaeg": "Fast forsæde",
+            "bevilget_koereafstand_pr_vej": "10",
+            "dage": "Alle",
+            "bevilling_fra": "01-01-2026",
+            "bevilling_til": "01-01-2027",
+            "taxa_id": "",
+        },
+        "skolerejsekort": {
+            "tidspunkt": "Eftermiddag",
+            "koerselstype_tillaeg": "Co-driver, Fast sæde",
+            "bevilget_koereafstand_pr_vej": "10",
+            "dage": "Alle",
+            "bevilling_fra": "01-01-2026",
+            "bevilling_til": "01-01-2027",
+            "taxa_id": "",
+        },
+        # "test": {
+        #     "tidspunkt": "morgen",
+        #     "koerselstype_tillaeg": [""],
+        #     "bevilget_koereafstand_pr_vej": "10",
+        #     "dage": "tirsdag",
+        #     "bevilling_fra": "01-01-2026",
+        #     "bevilling_til": "01-01-2027",
+        #     "taxa_id": "",
+        # },
+    },
+
+    "modtagelsesdato": "21-11-2025"
+
+}
+
+input_dict = {
+
+    # KUN HVIS DER ER TALE OM ET OPHØR
+    "ophoers_dato": "",
+
+}
+
+custom_key_overrides = {}
+
+barnets_fulde_navn = citizen_data.get("barnets_fulde_navn")
+
+barnets_fornavn = barnets_fulde_navn.split()[0] if barnets_fulde_navn else ""
+citizen_data["barnets_fornavn"] = barnets_fornavn
+
+barnets_cpr = citizen_data.get("barnets_cpr")
+
+status = citizen_data.get("status")
+
+folkeregisteraddresse = citizen_data.get("folkeregisteraddresse")
+
+skole = citizen_data.get("skole")
+
+skolematrikel = citizen_data.get("skolematrikel")
+
+gaaafstand_km = citizen_data.get("gaaafstand_km")
+
+klasseart = citizen_data.get("klasseart")
+
+klassebetegnelse = citizen_data.get("klassebetegnelse")
+
+personligt_klassetrin = citizen_data.get("personligt_klassetrin")
+
+sfo = citizen_data.get("sfo")
+
+bopaelsdistrikt = citizen_data.get("bopaelsdistrikt")
+
+sagsbehandlingsdato = citizen_data.get("sagsbehandlingsdato")
+
+hjaelpemidler_raw = citizen_data.get("hjaelpemidler")
+hjaelpemidler = [item.strip() for item in hjaelpemidler_raw.split(",")] if hjaelpemidler_raw else []
+custom_key_overrides["hjaelpemidler"] = hjaelpemidler
+
+adresse_for_bevilling = citizen_data.get("adresse_for_bevilling")
+
+afstandskriterie_dato = citizen_data.get("afstandskriterie_dato")
+
+afstandskriterie_klassetrin = citizen_data.get("afstandskriterie_klassetrin")
+
+ansoeger_relation = citizen_data.get("ansoeger_relation")
+
+revurdering = citizen_data.get("revurdering")
+
+befordringsudvalg = citizen_data.get("befordringsudvalg")
+
+hjemmel = citizen_data.get("hjemmel")
+
+afgoerelsesbrev = citizen_data.get("afgoerelsesbrev")
+afgoerelsesbrev_decision = (
+    afgoerelsesbrev.split(":", 1)[0].strip()
+    if afgoerelsesbrev
+    else None
+)
+
+sagsbehandler = citizen_data.get("sagsbehandler")
+
+ppr_ansvarlig = citizen_data.get("ppr_ansvarlig")
+
+koerselstype = []
+koerselstype_tillaeg = []
+koerselsraekker = citizen_data.get("koerselsraekker")
+if koerselsraekker:
+    koerselstype = []
+    koerselstype_tillaeg = []
+
+    for koerselstype_key, koerselstype_data in koerselsraekker.items():
+        koerselstype.append(koerselstype_key)
+
+        raw = koerselstype_data.get("koerselstype_tillaeg")
+        if raw:
+            koerselstype_tillaeg.extend(
+                item.strip() for item in raw.split(",")
+            )
+custom_key_overrides["koerselstype"] = koerselstype
+custom_key_overrides["koerselstype_tillaeg"] = koerselstype_tillaeg
+
+if "midlertidig" in str(afgoerelsesbrev).lower():
+    klagevejledning = "Klagevejledning brækket ben ungdomsuddannelse"
+
+else:
+    klagevejledning = "Klagevejledning"
+
+if afgoerelsesbrev == "Afslag: § 33, stk. 3 (ungdomsskolen)":
+    regler = "Regler § 33, stk. 3 (ungdomsskoleloven)"
+
+elif "midlertidig" in str(afgoerelsesbrev).lower():
+    regler = "Regler brækket ben ungdomssuddanelse"
+
+else:
+    regler = "Regler standard"
+
+block_metadata = {
+    "has_value": [
+        "1.2",
+        "3.2",
+        "4",
+    ],
+    "custom": {
+        "3.1": block_handlers.handle_custom_koerselstyper,
+    },
+    "custom_key": {
+        "5": afgoerelsesbrev_decision,
+        "8": afgoerelsesbrev_decision,
+        "9.1": klagevejledning,
+        "9.2": regler,
+    },
+    "copy": {
+        "7.3": "3.1",
+    },
+    "all": [
+        "7.4",
+    ],
+}
 
 
 def retrieve_items_for_queue() -> list[dict]:
     """Function to populate queue"""
+
     data = []
     references = []
+
+    print(koerselsraekker)
+
+    sharepoint = Sharepoint(**config.SHAREPOINT_KWARGS)
+
+    test_binary_excel = sharepoint.fetch_file_using_open_binary(
+        file_name="Afgørelsesbreve.xlsx",
+        folder_name=config.FOLDER_NAME
+    )
+
+    blocks = helper_functions.parse_workbook(citizen_data=citizen_data, input_dict=input_dict, binary_excel=test_binary_excel, block_metadata=block_metadata)
+
+    # print()
+    # print()
+    # print()
+    # print(blocks)
+    # print()
+    # print()
+    # print()
+
+    print()
+
+    request_data = {**citizen_data, **input_dict}
+
+    request = {
+        "data": request_data,
+        "block_data": blocks,
+        "custom_key_overrides": custom_key_overrides,
+    }
+
+    url = "http://127.0.0.1:8000/skabelonmotor/api/create_text"
+
+    pdf_response = requests.post(url, json=request, timeout=10)
+    pdf_response.raise_for_status()
+
+    pdf_bytes = pdf_response.content
+
+    with open("test_letter.pdf", "wb") as f:
+        f.write(pdf_bytes)
+
+    # print()
+    # print()
+    # print()
+    # print(f"API result:\n\n{pdf_result}")
+    # print()
+    # print()
+    # print()
+
+    sys.exit()
+
+    letter_text = ""
+
+    for block_id, block_data in blocks.items():
+
+        if block_id not in (
+            "1.1",
+            "1.2",
+            # "2.1",
+            # "2.2"
+        ):
+            continue
+
+        # if block_id.startswith("1."):
+        #     letter_text = block_handlers.handle_block_1(
+        #         letter_text=letter_text,
+        #         citizen_data=citizen_data,
+        #         block_id=block_id,
+        #         block_data=block_data,
+        #         koerselsraekker=koerselsraekker
+        #     )
+
+        # elif block_id.startswith("2."):
+        #     letter_text = block_handlers.handle_block_2(
+        #         letter_text=letter_text,
+        #         citizen_data=citizen_data,
+        #         afgoerelsesbrev=afgoerelsesbrev,
+        #         block_id=block_id,
+        #         block_data=block_data,
+        #     )
+
+    letter_text = helper_functions.replace_input_placeholders(letter_text=letter_text, citizen_data=citizen_data, input_data=input_dict)
+
+    print(letter_text)
+
+    sys.exit()
+
+    for key, value in helper_functions.HJEMMEL_MAPPING.items():
+        print(key)
+        print(value)
+        print()
+        print()
+
+    sys.exit()
 
     items = [
         {"reference": ref, "data": d} for ref, d in zip(references, data, strict=True)

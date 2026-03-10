@@ -1,14 +1,9 @@
 [project]
-name = "rpa_afgorelsesbreve"
-
-version = "0.0.0"
-
+name = "rpa_afgoerelsesbreve"
+version = "0.0.1"
 description = "Add your description here"
-
 readme = "README.md"
-
 requires-python = ">=3.13"
-
 dependencies = [
   "openpyxl >= 3.1.2",
   "mbu_msoffice_integration>=1.0.1",
@@ -19,7 +14,11 @@ dependencies = [
   "ruff",
   "sqlalchemy >= 2.0.20",
   "sqlalchemy[asyncio] >= 2.0.20",
+  "requests",
 ]
+
+[tool.uv.sources]
+automation-server-client = { git = "https://github.com/odense-rpa/automation-server-client.git", tag = "v0.2.1" }
 
 [tool.setuptools]
 py-modules = []
