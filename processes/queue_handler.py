@@ -33,7 +33,7 @@ citizen_data = {
 
     "status": "aktiv",
 
-    "folkeregisteraddresse": "Gade 1, 8000 Aarhus C",
+    "folkeregisteradresse": "Gade 1, 8000 Aarhus C",
 
     "skole": "Langagerskolen",
 
@@ -85,15 +85,15 @@ citizen_data = {
             "bevilling_til": "01-01-2027",
             "taxa_id": "",
         },
-        "skolerejsekort": {
-            "tidspunkt": "Eftermiddag",
-            "koerselstype_tillaeg": "Co-driver, Fast sæde",
-            "bevilget_koereafstand_pr_vej": "10",
-            "dage": "Alle",
-            "bevilling_fra": "01-01-2026",
-            "bevilling_til": "01-01-2027",
-            "taxa_id": "",
-        },
+        # "skolerejsekort": {
+        #     "tidspunkt": "Eftermiddag",
+        #     "koerselstype_tillaeg": "Co-driver, Fast sæde",
+        #     "bevilget_koereafstand_pr_vej": "10",
+        #     "dage": "Alle",
+        #     "bevilling_fra": "01-01-2026",
+        #     "bevilling_til": "01-01-2027",
+        #     "taxa_id": "",
+        # },
         # "test": {
         #     "tidspunkt": "morgen",
         #     "koerselstype_tillaeg": [""],
@@ -123,47 +123,11 @@ barnets_fulde_navn = citizen_data.get("barnets_fulde_navn")
 barnets_fornavn = barnets_fulde_navn.split()[0] if barnets_fulde_navn else ""
 citizen_data["barnets_fornavn"] = barnets_fornavn
 
-barnets_cpr = citizen_data.get("barnets_cpr")
-
-status = citizen_data.get("status")
-
-folkeregisteraddresse = citizen_data.get("folkeregisteraddresse")
-
-skole = citizen_data.get("skole")
-
-skolematrikel = citizen_data.get("skolematrikel")
-
-gaaafstand_km = citizen_data.get("gaaafstand_km")
-
-klasseart = citizen_data.get("klasseart")
-
-klassebetegnelse = citizen_data.get("klassebetegnelse")
-
-personligt_klassetrin = citizen_data.get("personligt_klassetrin")
-
-sfo = citizen_data.get("sfo")
-
-bopaelsdistrikt = citizen_data.get("bopaelsdistrikt")
-
-sagsbehandlingsdato = citizen_data.get("sagsbehandlingsdato")
-
 hjaelpemidler_raw = citizen_data.get("hjaelpemidler")
 hjaelpemidler = [item.strip() for item in hjaelpemidler_raw.split(",")] if hjaelpemidler_raw else []
 custom_key_overrides["hjaelpemidler"] = hjaelpemidler
 
-adresse_for_bevilling = citizen_data.get("adresse_for_bevilling")
-
-afstandskriterie_dato = citizen_data.get("afstandskriterie_dato")
-
-afstandskriterie_klassetrin = citizen_data.get("afstandskriterie_klassetrin")
-
-ansoeger_relation = citizen_data.get("ansoeger_relation")
-
 revurdering = citizen_data.get("revurdering")
-
-befordringsudvalg = citizen_data.get("befordringsudvalg")
-
-hjemmel = citizen_data.get("hjemmel")
 
 afgoerelsesbrev = citizen_data.get("afgoerelsesbrev")
 afgoerelsesbrev_decision = (
@@ -172,18 +136,22 @@ afgoerelsesbrev_decision = (
     else None
 )
 
-sagsbehandler = citizen_data.get("sagsbehandler")
-
-ppr_ansvarlig = citizen_data.get("ppr_ansvarlig")
-
+koerselsraekker = citizen_data.get("koerselsraekker") or {}
+sorted_koerselstyper = sorted(
+    koerselsraekker.items(),
+    key=lambda item: (
+        helper_functions.parse_date(item[1].get("bevilling_fra")),
+        helper_functions.parse_date(item[1].get("bevilling_til")),
+        item[0].lower(),
+    )
+)
 koerselstype = []
 koerselstype_tillaeg = []
-koerselsraekker = citizen_data.get("koerselsraekker")
-if koerselsraekker:
-    koerselstype = []
-    koerselstype_tillaeg = []
+if sorted_koerselstyper:
+    for i, (koerselstype_key, koerselstype_data) in enumerate(sorted_koerselstyper):
+        if i == 0:
+            citizen_data["koersel_startdato"] = koerselstype_data.get("bevilling_fra")
 
-    for koerselstype_key, koerselstype_data in koerselsraekker.items():
         koerselstype.append(koerselstype_key)
 
         raw = koerselstype_data.get("koerselstype_tillaeg")
@@ -257,34 +225,31 @@ def retrieve_items_for_queue() -> list[dict]:
     # print()
     # print()
     # print()
+    # sys.exit()
 
     print()
 
     request_data = {**citizen_data, **input_dict}
 
-    request = {
-        "data": request_data,
-        "block_data": blocks,
-        "custom_key_overrides": custom_key_overrides,
-    }
+    for file_type in ["pdf", "docx"]:
+        request = {
+            "data": request_data,
+            "block_data": blocks,
+            "custom_key_overrides": custom_key_overrides,
+            "file_type": file_type
+        }
 
-    url = "http://127.0.0.1:8000/skabelonmotor/api/create_text"
+        url = "http://127.0.0.1:8000/skabelonmotor/api/create_text"
 
-    pdf_response = requests.post(url, json=request, timeout=10)
-    pdf_response.raise_for_status()
+        response = requests.post(url, json=request, timeout=10)
+        response.raise_for_status()
 
-    pdf_bytes = pdf_response.content
+        file_bytes = response.content
 
-    with open("test_letter.pdf", "wb") as f:
-        f.write(pdf_bytes)
+        file_name = f"test_letter.{file_type}"
 
-    # print()
-    # print()
-    # print()
-    # print(f"API result:\n\n{pdf_result}")
-    # print()
-    # print()
-    # print()
+        with open(file_name, "wb") as f:
+            f.write(file_bytes)
 
     sys.exit()
 

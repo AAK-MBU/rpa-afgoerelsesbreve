@@ -11,7 +11,9 @@ import copy
 from datetime import datetime
 
 from io import BytesIO
+
 from openpyxl import load_workbook
+from openpyxl.cell.rich_text import CellRichText
 
 BLOCK_HEADER_PATTERN = re.compile(r"^Blok\s+([0-9]+(?:\.\s*[0-9]+)?[a-zA-Z]?)")
 
@@ -25,12 +27,85 @@ def parse_date(value: str | None):
     return datetime.strptime(value, "%d-%m-%Y")
 
 
-def parse_workbook(citizen_data: dict, input_dict: dict, binary_excel: bytes, block_metadata: dict) -> list[dict]:
+def extract_cell_formatting(cell):
     """
-    def
+    Convert Excel rich text into formatted HTML-like string.
     """
 
-    wb = load_workbook(BytesIO(binary_excel), data_only=True)
+    if cell is None or cell.value is None:
+        return ""
+
+    value = cell.value
+
+    # ----------------------------------------
+    # Rich formatted text
+    # ----------------------------------------
+
+    if isinstance(value, CellRichText):
+
+        parts = []
+
+        for block in value:
+
+            text = block.text or ""
+            font = block.font
+
+            if not text:
+                continue
+
+            # remove invisible characters Excel sometimes adds
+            text = text.replace("\u200b", "")
+
+            prefix = ""
+            suffix = ""
+
+            if font:
+
+                # Bold
+                if font.b:
+                    prefix += "<strong>"
+                    suffix = "</strong>" + suffix
+
+                # Italic
+                if font.i:
+                    prefix += "<em>"
+                    suffix = "</em>" + suffix
+
+                # Underline
+                if font.u in ["single", "double", "singleAccounting", "doubleAccounting", True]:
+                    prefix += "<u>"
+                    suffix = "</u>" + suffix
+
+                # Strikethrough
+                if font.strike:
+                    prefix += "<strike>"
+                    suffix = "</strike>" + suffix
+
+                # Color
+                if font.color and font.color.rgb:
+                    rgb = font.color.rgb[-6:]
+
+                    if rgb != "000000":
+                        prefix += f'<span style="color:#{rgb}">'
+                        suffix = "</span>" + suffix
+
+            parts.append(f"{prefix}{text}{suffix}")
+
+        return "".join(parts)
+
+    # ----------------------------------------
+    # Plain text cell
+    # ----------------------------------------
+
+    return str(value)
+
+
+def parse_workbook(citizen_data: dict, input_dict: dict, binary_excel: bytes, block_metadata: dict) -> list[dict]:
+    """
+    Parse Excel workbook into structured block data.
+    """
+
+    wb = load_workbook(BytesIO(binary_excel), rich_text=True)
 
     parsed_blocks = []
 
@@ -46,21 +121,28 @@ def parse_workbook(citizen_data: dict, input_dict: dict, binary_excel: bytes, bl
     for condition, blocks in block_metadata.items():
 
         if condition == "custom":
+
             for block_id, func in blocks.items():
+
                 condition_lookup[block_id] = "custom"
                 custom_function_lookup[block_id] = func
 
         elif condition == "custom_key":
+
             for block_id, value in blocks.items():
+
                 condition_lookup[block_id] = "custom_key"
                 custom_key_lookup[block_id] = value
 
         elif condition == "copy":
+
             for block_id, source_block in blocks.items():
+
                 condition_lookup[block_id] = "copy"
                 copy_lookup[block_id] = source_block
 
         else:
+
             for block_id in blocks:
                 condition_lookup[block_id] = condition
 
@@ -77,12 +159,16 @@ def parse_workbook(citizen_data: dict, input_dict: dict, binary_excel: bytes, bl
 
         ws = wb[sheet_name]
 
-        rows = list(ws.iter_rows(values_only=True))
+        rows = list(ws.iter_rows())
 
         for i, row in enumerate(rows):
 
-            col_a = row[0]
-            col_b = row[1] if len(row) > 1 else None
+            col_a_cell = row[0] if len(row) > 0 else None
+            col_b_cell = row[1] if len(row) > 1 else None
+            col_c_cell = row[2] if len(row) > 2 else None
+
+            col_a = col_a_cell.value if col_a_cell else None
+            col_b = extract_cell_formatting(col_b_cell) if col_b_cell else None
 
             # ----------------------------------------
             # Detect block header
@@ -112,13 +198,17 @@ def parse_workbook(citizen_data: dict, input_dict: dict, binary_excel: bytes, bl
                     block_id = match.group(1).replace(" ", "").strip()
 
                     next_row = rows[i + 1] if i + 1 < len(rows) else None
-                    next_col_c = next_row[2] if next_row and len(next_row) > 2 else None
+                    next_col_c = None
+
+                    if next_row and len(next_row) > 2:
+                        next_col_c = next_row[2].value
 
                     condition = condition_lookup.get(block_id, "equals")
 
                     mapping = str(next_col_c).strip() if next_col_c else None
 
                     if condition == "custom_key":
+
                         mapping = custom_key_lookup.get(block_id)
                         condition = "custom"
 
@@ -143,7 +233,7 @@ def parse_workbook(citizen_data: dict, input_dict: dict, binary_excel: bytes, bl
 
             if col_a and col_b:
 
-                entry_text = str(col_b).strip()
+                entry_text = col_b.strip()
 
                 if normalize_key(entry_text) == "ingentekst":
                     continue
