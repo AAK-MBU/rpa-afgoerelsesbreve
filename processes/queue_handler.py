@@ -1,9 +1,6 @@
 """Module to hande queue population"""
 
 import sys
-import os
-
-import requests
 
 import re
 
@@ -11,8 +8,7 @@ import asyncio
 import json
 import logging
 
-from io import BytesIO
-from openpyxl import load_workbook
+import requests
 
 from automation_server_client import Workqueue
 
@@ -85,15 +81,15 @@ citizen_data = {
             "bevilling_til": "01-01-2027",
             "taxa_id": "",
         },
-        # "skolerejsekort": {
-        #     "tidspunkt": "Eftermiddag",
-        #     "koerselstype_tillaeg": "Co-driver, Fast sæde",
-        #     "bevilget_koereafstand_pr_vej": "10",
-        #     "dage": "Alle",
-        #     "bevilling_fra": "01-01-2026",
-        #     "bevilling_til": "01-01-2027",
-        #     "taxa_id": "",
-        # },
+        "skolerejsekort": {
+            "tidspunkt": "Eftermiddag",
+            "koerselstype_tillaeg": "Co-driver, Fast sæde",
+            "bevilget_koereafstand_pr_vej": "10",
+            "dage": "Alle",
+            "bevilling_fra": "01-01-2026",
+            "bevilling_til": "01-01-2027",
+            "taxa_id": "",
+        },
         # "test": {
         #     "tidspunkt": "morgen",
         #     "koerselstype_tillaeg": [""],
@@ -250,50 +246,6 @@ def retrieve_items_for_queue() -> list[dict]:
 
         with open(file_name, "wb") as f:
             f.write(file_bytes)
-
-    sys.exit()
-
-    letter_text = ""
-
-    for block_id, block_data in blocks.items():
-
-        if block_id not in (
-            "1.1",
-            "1.2",
-            # "2.1",
-            # "2.2"
-        ):
-            continue
-
-        # if block_id.startswith("1."):
-        #     letter_text = block_handlers.handle_block_1(
-        #         letter_text=letter_text,
-        #         citizen_data=citizen_data,
-        #         block_id=block_id,
-        #         block_data=block_data,
-        #         koerselsraekker=koerselsraekker
-        #     )
-
-        # elif block_id.startswith("2."):
-        #     letter_text = block_handlers.handle_block_2(
-        #         letter_text=letter_text,
-        #         citizen_data=citizen_data,
-        #         afgoerelsesbrev=afgoerelsesbrev,
-        #         block_id=block_id,
-        #         block_data=block_data,
-        #     )
-
-    letter_text = helper_functions.replace_input_placeholders(letter_text=letter_text, citizen_data=citizen_data, input_data=input_dict)
-
-    print(letter_text)
-
-    sys.exit()
-
-    for key, value in helper_functions.HJEMMEL_MAPPING.items():
-        print(key)
-        print(value)
-        print()
-        print()
 
     sys.exit()
 

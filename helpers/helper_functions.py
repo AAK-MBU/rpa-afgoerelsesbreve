@@ -1,8 +1,6 @@
 """
-Docstring for afgørelsesbreve_folder.helper_functions
+Utility functions used by the skabelonmotor Excel parser.
 """
-
-import sys
 
 import re
 
@@ -15,11 +13,24 @@ from io import BytesIO
 from openpyxl import load_workbook
 from openpyxl.cell.rich_text import CellRichText
 
+
+# Regex used to detect block headers such as:
+# "Blok 1", "Blok 3.1", "Blok 7.2a"
 BLOCK_HEADER_PATTERN = re.compile(r"^Blok\s+([0-9]+(?:\.\s*[0-9]+)?[a-zA-Z]?)")
 
 
 def parse_date(value: str | None):
-    """Convert DD-MM-YYYY string to datetime for sorting."""
+    """
+    Convert a DD-MM-YYYY string into a datetime object.
+
+    Used primarily for sorting transport rows by start/end date.
+
+    Args:
+        value (str | None): Date string in DD-MM-YYYY format.
+
+    Returns:
+        datetime: Parsed date or datetime.max if value is missing.
+    """
 
     if not value:
         return datetime.max
@@ -29,7 +40,16 @@ def parse_date(value: str | None):
 
 def extract_cell_formatting(cell):
     """
-    Convert Excel rich text into formatted HTML-like string.
+    Convert Excel rich text content into HTML-like formatted text.
+
+    Handles formatting such as bold, italic, underline, strike-through
+    and color while preserving the original text structure.
+
+    Args:
+        cell: openpyxl cell object.
+
+    Returns:
+        str: HTML-like formatted text.
     """
 
     if cell is None or cell.value is None:
@@ -38,9 +58,8 @@ def extract_cell_formatting(cell):
     value = cell.value
 
     # ----------------------------------------
-    # Rich formatted text
+    # Rich formatted text (Excel rich text)
     # ----------------------------------------
-
     if isinstance(value, CellRichText):
 
         parts = []
@@ -53,7 +72,7 @@ def extract_cell_formatting(cell):
             if not text:
                 continue
 
-            # remove invisible characters Excel sometimes adds
+            # Remove zero-width characters sometimes inserted by Excel
             text = text.replace("\u200b", "")
 
             prefix = ""
@@ -81,10 +100,11 @@ def extract_cell_formatting(cell):
                     prefix += "<strike>"
                     suffix = "</strike>" + suffix
 
-                # Color
+                # Text color
                 if font.color and font.color.rgb:
                     rgb = font.color.rgb[-6:]
 
+                    # Skip default black text
                     if rgb != "000000":
                         prefix += f'<span style="color:#{rgb}">'
                         suffix = "</span>" + suffix
@@ -94,15 +114,35 @@ def extract_cell_formatting(cell):
         return "".join(parts)
 
     # ----------------------------------------
-    # Plain text cell
+    # Plain text cell (no formatting)
     # ----------------------------------------
-
     return str(value)
 
 
 def parse_workbook(citizen_data: dict, input_dict: dict, binary_excel: bytes, block_metadata: dict) -> list[dict]:
     """
-    Parse Excel workbook into structured block data.
+    Parse the Excel template into structured block definitions used by the skabelonmotor.
+
+    The workbook is scanned for rows starting with "Blok X", which define logical
+    text blocks in the template. Each block is converted into a dictionary containing
+    a block id, mapping key, condition type and its possible text entries.
+
+    Parsing happens in three main stages:
+    1. Build lookup tables from `block_metadata` so each block knows its behavior
+       (e.g. equals, has_value, custom, copy).
+    2. Iterate through sheets and rows to detect block headers and collect their
+       entries from the Excel template.
+    3. Post-process blocks by executing custom handlers and resolving "copy"
+       blocks that inherit content from other blocks.
+
+    Args:
+        citizen_data (dict): Citizen data used by custom block handlers.
+        input_dict (dict): Additional input values used during block generation.
+        binary_excel (bytes): Excel workbook content.
+        block_metadata (dict): Configuration describing block conditions and handlers.
+
+    Returns:
+        list[dict]: Parsed block structures ready for the template engine.
     """
 
     wb = load_workbook(BytesIO(binary_excel), rich_text=True)
@@ -117,7 +157,7 @@ def parse_workbook(citizen_data: dict, input_dict: dict, binary_excel: bytes, bl
     # ----------------------------------------
     # Build condition lookup tables
     # ----------------------------------------
-
+    # Converts block_metadata into quick lookup dictionaries so each block can easily determine its behavior.
     for condition, blocks in block_metadata.items():
 
         if condition == "custom":
@@ -149,23 +189,20 @@ def parse_workbook(citizen_data: dict, input_dict: dict, binary_excel: bytes, bl
     current_block = {}
 
     # ----------------------------------------
-    # Parse workbook
+    # Parse workbook sheets
     # ----------------------------------------
-
     for sheet_name in wb.sheetnames:
-
+        # Ignore sheets not starting with "Blok"
         if not sheet_name.startswith("Blok"):
             continue
 
         ws = wb[sheet_name]
-
         rows = list(ws.iter_rows())
 
         for i, row in enumerate(rows):
 
             col_a_cell = row[0] if len(row) > 0 else None
             col_b_cell = row[1] if len(row) > 1 else None
-            col_c_cell = row[2] if len(row) > 2 else None
 
             col_a = col_a_cell.value if col_a_cell else None
             col_b = extract_cell_formatting(col_b_cell) if col_b_cell else None
@@ -173,17 +210,11 @@ def parse_workbook(citizen_data: dict, input_dict: dict, binary_excel: bytes, bl
             # ----------------------------------------
             # Detect block header
             # ----------------------------------------
-
             if isinstance(col_a, str):
-
                 match = BLOCK_HEADER_PATTERN.match(col_a)
 
                 if match:
-
-                    # ----------------------------------------
-                    # Finish previous block before starting new
-                    # ----------------------------------------
-
+                    # Finish previous block if it required custom processing
                     if current_block and current_block["condition"] == "custom":
 
                         func = custom_function_lookup.get(current_block["block_id"])
@@ -197,6 +228,7 @@ def parse_workbook(citizen_data: dict, input_dict: dict, binary_excel: bytes, bl
 
                     block_id = match.group(1).replace(" ", "").strip()
 
+                    # Mapping key is defined in column C of the next row
                     next_row = rows[i + 1] if i + 1 < len(rows) else None
                     next_col_c = None
 
@@ -207,8 +239,8 @@ def parse_workbook(citizen_data: dict, input_dict: dict, binary_excel: bytes, bl
 
                     mapping = str(next_col_c).strip() if next_col_c else None
 
+                    # custom_key behaves like a custom block but with a predefined mapping value
                     if condition == "custom_key":
-
                         mapping = custom_key_lookup.get(block_id)
                         condition = "custom"
 
@@ -228,13 +260,12 @@ def parse_workbook(citizen_data: dict, input_dict: dict, binary_excel: bytes, bl
                 continue
 
             # ----------------------------------------
-            # Parse entries
+            # Parse block entries
             # ----------------------------------------
-
             if col_a and col_b:
-
                 entry_text = col_b.strip()
 
+                # Skip placeholder rows like "Ingen tekst"
                 if normalize_key(entry_text) == "ingentekst":
                     continue
 
@@ -243,11 +274,9 @@ def parse_workbook(citizen_data: dict, input_dict: dict, binary_excel: bytes, bl
                 current_block["entries"][key] = entry_text
 
         # ----------------------------------------
-        # After sheet ends, finalize last block
+        # Finalize last block in sheet
         # ----------------------------------------
-
         if current_block and current_block["condition"] == "custom":
-
             func = custom_function_lookup.get(current_block["block_id"])
 
             if func:
@@ -257,6 +286,9 @@ def parse_workbook(citizen_data: dict, input_dict: dict, binary_excel: bytes, bl
                     current_block
                 )
 
+    # ----------------------------------------
+    # Apply "copy" block behavior
+    # ----------------------------------------
     block_map = {b["block_id"]: b for b in parsed_blocks}
 
     for block in parsed_blocks:
@@ -275,134 +307,18 @@ def parse_workbook(citizen_data: dict, input_dict: dict, binary_excel: bytes, bl
     return parsed_blocks
 
 
-def replace_input_placeholders(letter_text: str, citizen_data: dict, input_data: dict):
-    """
-    Docstring for replace_input_placeholders
-
-    :param letter_text: Description
-    :type letter_text: str
-    :param citizen_data: Description
-    :type citizen_data: dict
-    """
-
-    barnets_fulde_navn = citizen_data.get("barnets_fulde_navn")
-
-    barnets_fornavn = barnets_fulde_navn.split()[0] if barnets_fulde_navn else ""
-
-    barnets_cpr = citizen_data.get("barnets_cpr")
-
-    status = citizen_data.get("status")
-
-    folkeregisteraddresse = citizen_data.get("folkeregisteraddresse")
-
-    skole = citizen_data.get("skole")
-
-    skolematrikel = citizen_data.get("skolematrikel")
-
-    gaaafstand_km = citizen_data.get("gaaafstand_km")
-
-    klasseart = citizen_data.get("klasseart")
-
-    klassebetegnelse = citizen_data.get("klassebetegnelse")
-
-    personligt_klassetrin = citizen_data.get("personligt_klassetrin")
-
-    sfo = citizen_data.get("sfo")
-
-    bopaelsdistrikt = citizen_data.get("bopaelsdistrikt")
-
-    sagsbehandlingsdato = citizen_data.get("sagsbehandlingsdato")
-
-    hjaelpemidler = citizen_data.get("hjaelpemidler")
-
-    adresse_for_bevilling = citizen_data.get("adresse_for_bevilling")
-
-    afstandskriterie_dato = citizen_data.get("afstandskriterie_dato")
-
-    afstandskriterie_klassetrin = citizen_data.get("afstandskriterie_klassetrin")
-
-    ansoeger_relation = citizen_data.get("ansoeger_relation")
-
-    revurdering = citizen_data.get("revurdering")
-
-    befordringsudvalg = citizen_data.get("befordringsudvalg")
-
-    hjemmel = citizen_data.get("hjemmel")
-
-    afgoerelsesbrev = citizen_data.get("afgoerelsesbrev")
-
-    sagsbehandler = citizen_data.get("sagsbehandler")
-
-    ppr_ansvarlig = citizen_data.get("ppr_ansvarlig")
-
-    koerselsraekker = citizen_data.get("koerselsraekker")
-
-    ophoersdato = input_data.get("ophoersdato")
-
-    if not koerselsraekker:
-        koersel_startdato = None
-        koersel_slutdato = None
-
-    elif len(koerselsraekker) == 1:
-        first_value = next(iter(koerselsraekker.values()))
-
-        koersel_startdato = first_value.get("bevilling_fra")
-        koersel_slutdato = first_value.get("bevilling_til")
-
-    else:
-        koersel_startdato = min(
-            koerselsraekker.values(),
-            key=lambda k: parse_date(k.get("bevilling_fra"))
-        ).get("bevilling_fra")
-
-        koersel_slutdato = max(
-            koerselsraekker.values(),
-            key=lambda k: parse_date(k.get("bevilling_til"))
-        ).get("bevilling_til")
-
-    letter_text = letter_text.replace("Dato (modtagelse af ansøgning)", sagsbehandlingsdato)
-
-    letter_text = letter_text.replace("Barnets fulde navn", barnets_fulde_navn)
-
-    letter_text = letter_text.replace("Barnets fornavn", barnets_fornavn)
-
-    letter_text = letter_text.replace("Barnets-cpr", barnets_cpr)
-
-    letter_text = letter_text.replace("Nuværende klassetrin", input_data.get("nuvaerende_klassetrin"))
-
-    letter_text = letter_text.replace("Skolens navn", skole)
-
-    letter_text = letter_text.replace("D.D.", revurdering)
-
-    letter_text = letter_text.replace("Kørsel startdato", koersel_startdato)
-
-    letter_text = letter_text.replace("Kørsel slutdato", koersel_slutdato)
-
-    letter_text = letter_text.replace("Dato for befordringsudvalgsmøde", befordringsudvalg)
-
-    letter_text = letter_text.replace("Folkeregisteradresse", adresse_for_bevilling)
-
-    letter_text = letter_text.replace("Afstandskriterie dato", afstandskriterie_dato)
-
-    letter_text = letter_text.replace("Afstandskriterie klassetrin", afstandskriterie_klassetrin)
-
-    letter_text = letter_text.replace("km gå", gaaafstand_km)
-
-    letter_text = letter_text.replace("Sagsbehandlers navn", sagsbehandler)
-
-    letter_text = letter_text.replace("{ophoersdato}", ophoersdato)
-
-    return letter_text
-
-
 def normalize_key(value: str) -> str:
     """
-    Docstring for normalize_key
+    Normalize text for reliable key comparison.
 
-    :param value: Description
-    :type value: str
-    :return: Description
-    :rtype: str
+    Removes whitespace, punctuation and Danish characters
+    so template keys can be compared consistently.
+
+    Args:
+        value (str): Input string.
+
+    Returns:
+        str: Normalized key.
     """
 
     return (

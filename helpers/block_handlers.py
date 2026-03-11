@@ -1,23 +1,28 @@
-"""Helper to have block handler functions"""
-
-import sys
-
-from datetime import datetime
+"""Custom block handler functions used by the skabelonmotor."""
 
 from helpers import helper_functions
 
 
 def handle_custom_koerselstyper(citizen_data: dict, input_dict: dict, block: dict):
     """
-    test
+    Generate dynamic text for the "Kørselstype" block based on the transport rows in citizen_data["koerselsraekker"].
+
+    Args:
+        citizen_data (dict): Citizen data containing transport rows.
+        input_dict (dict): Additional inputs (e.g. termination date).
+        block (dict): Parsed block that will be modified.
+
+    Returns:
+        dict: Updated block with generated mapping and entries.
     """
 
+    # All configured transport rows for the child
     koerselsraekker = citizen_data.get("koerselsraekker", {})
 
     # ----------------------------------------
     # Ophør overrides everything
     # ----------------------------------------
-
+    # If a termination date exists we ignore transport rows and generate a simple termination sentence.
     if input_dict.get("ophoers_dato"):
 
         text = f"Den nuværende kørsel ophører pr. {input_dict['ophoers_dato']}."
@@ -32,9 +37,8 @@ def handle_custom_koerselstyper(citizen_data: dict, input_dict: dict, block: dic
     # ----------------------------------------
     # Single transport type
     # ----------------------------------------
-
+    # If only one transport row exists, generate one sentence.
     if antal == 1:
-
         key, data = next(iter(koerselsraekker.items()))
 
         koerselstype = key
@@ -45,9 +49,11 @@ def handle_custom_koerselstyper(citizen_data: dict, input_dict: dict, block: dic
 
         extras = []
 
-        if tidspunkt and tidspunkt != "Morgen og Eftermiddag":
+        # Include tidspunkt if it is not the default full-day transport
+        if tidspunkt and tidspunkt.lower() != "morgen og eftermiddag":
             extras.append(tidspunkt)
 
+        # Include specific days if transport is not valid for "Alle"
         if dage and dage.lower() != "alle":
             extras.append(dage)
 
@@ -66,9 +72,10 @@ def handle_custom_koerselstyper(citizen_data: dict, input_dict: dict, block: dic
     # ----------------------------------------
     # Multiple transport types
     # ----------------------------------------
-
+    # If several rows exist, create a bullet list describing each.
     lines = ["Kørslen bevilges i følgende form:"]
 
+    # Sort rows by start date, end date, and type name
     sorted_koerselstyper = sorted(
         koerselsraekker.items(),
         key=lambda item: (
@@ -79,7 +86,6 @@ def handle_custom_koerselstyper(citizen_data: dict, input_dict: dict, block: dic
     )
 
     for key, data in sorted_koerselstyper:
-
         start = data.get("bevilling_fra")
         slut = data.get("bevilling_til")
         tidspunkt = data.get("tidspunkt")
