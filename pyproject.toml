@@ -5,16 +5,18 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-  "openpyxl >= 3.1.2",
+  "automation-server-client @ git+https://github.com/odense-rpa/automation-server-client.git",
   "mbu_msoffice_integration>=1.0.1",
   "mbu-dev-shared-components[solteqtand]>=4.3.0",
   "mbu-rpa-core",
-  "automation-server-client @ git+https://github.com/odense-rpa/automation-server-client.git",
+  "openpyxl >= 3.1.2",
+  "pandas",
   "pillow",
+  "python-docx",
+  "requests",
   "ruff",
   "sqlalchemy >= 2.0.20",
   "sqlalchemy[asyncio] >= 2.0.20",
-  "requests",
 ]
 
 [tool.uv.sources]

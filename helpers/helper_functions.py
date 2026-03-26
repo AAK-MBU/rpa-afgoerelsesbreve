@@ -2,21 +2,186 @@
 Utility functions used by the skabelonmotor Excel parser.
 """
 
+import os
 import re
-
 import copy
+import base64
+import urllib.parse
 
 from datetime import datetime
-
 from io import BytesIO
+
+from docx import Document
 
 from openpyxl import load_workbook
 from openpyxl.cell.rich_text import CellRichText
 
+import pandas as pd
+
+from sqlalchemy import create_engine, text
 
 # Regex used to detect block headers such as:
 # "Blok 1", "Blok 3.1", "Blok 7.2a"
 BLOCK_HEADER_PATTERN = re.compile(r"^Blok\s+([0-9]+(?:\.\s*[0-9]+)?[a-zA-Z]?)")
+
+
+def resolve_blocks(blocks: list[dict], item_data: dict, block_metadata: dict):
+
+    for block in blocks:
+        block_id = block.get("block_id")
+
+        if not block_id:
+            continue
+
+        # -------------------------
+        # DEFAULT
+        # -------------------------
+        block["condition"] = "equals"
+
+        # -------------------------
+        # COPY
+        # -------------------------
+        if block_id in block_metadata.get("copy", {}):
+            source_id = block_metadata["copy"][block_id]
+
+            source_block = next(
+                (b for b in blocks if b["block_id"] == source_id),
+                None
+            )
+
+            if source_block:
+                block["mapping"] = source_block.get("mapping")
+                block["entries"] = copy.deepcopy(source_block.get("entries", {}))
+                block["condition"] = source_block.get("condition", "equals")
+
+            continue
+
+        # -------------------------
+        # CUSTOM (function)
+        # -------------------------
+        if block_id in block_metadata.get("custom", {}):
+            func = block_metadata["custom"][block_id]
+
+            updated_block = func(item_data, block)
+
+            block.update(updated_block)
+            block["condition"] = "custom"
+
+            continue
+
+        # -------------------------
+        # CUSTOM KEY (precomputed value)
+        # -------------------------
+        if block_id in block_metadata.get("custom_key", {}):
+            value = block_metadata["custom_key"][block_id]
+
+            if value:
+                block["mapping"] = value
+                block["condition"] = "custom"
+
+            continue
+
+        # -------------------------
+        # HAS VALUE
+        # -------------------------
+        if block_id in block_metadata.get("has_value", []):
+            block["condition"] = "has_value"
+
+            continue
+
+        # -------------------------
+        # ALL
+        # -------------------------
+        if block_id in block_metadata.get("all", []):
+            block["condition"] = "all"
+
+            continue
+
+    return blocks
+
+
+def get_db_connection_string():
+    """
+    Database helper to retrieve the database connection string
+    """
+
+    return os.getenv("DBCONNECTIONSTRINGDEV")
+
+
+def read_sql(query: str = "", params: dict = None, conn_string: str = "") -> pd.DataFrame:
+    """
+    Run a SELECT sql statement
+    """
+
+    if params is None:
+        params = {}
+
+    encoded_conn_str = urllib.parse.quote_plus(conn_string)
+
+    engine = create_engine(f"mssql+pyodbc:///?odbc_connect={encoded_conn_str}")
+
+    try:
+        with engine.begin() as conn:
+            df = pd.read_sql(text(query), conn, params=params)
+
+        return df
+
+    except Exception as e:
+        print()
+        print("SQL error:", e)
+        print()
+
+        raise
+
+
+def replace_template_placeholders(template_bytes: str, data: dict) -> bytes:
+
+    doc = Document(BytesIO(template_bytes))
+
+    # -------------------------
+    # Pre-normalize data keys
+    # -------------------------
+    normalized_data = {
+        normalize_key(k): str(v)
+        for k, v in data.items()
+    }
+
+    # -------------------------
+    # Replace placeholders in tables
+    # -------------------------
+    for table in doc.tables:
+
+        for row in table.rows:
+
+            for cell in row.cells:
+
+                for paragraph in cell.paragraphs:
+
+                    text = paragraph.text
+
+                    # Find all {{...}} placeholders
+                    matches = re.findall(r"\{\{(.*?)\}\}", text)
+
+                    for match in matches:
+
+                        normalized_placeholder = normalize_key(match)
+
+                        if normalized_placeholder in normalized_data:
+
+                            value = normalized_data[normalized_placeholder]
+
+                            # Replace original (not normalized!) placeholder
+                            text = text.replace(f"{{{{{match}}}}}", value)
+
+                    paragraph.text = text
+
+    # Save to buffer
+    buffer = BytesIO()
+    doc.save(buffer)
+
+    template_b64 = base64.b64encode(buffer.getvalue()).decode()
+
+    return template_b64
 
 
 def parse_date(value: str | None):
@@ -75,6 +240,9 @@ def extract_cell_formatting(cell):
             # Remove zero-width characters sometimes inserted by Excel
             text = text.replace("\u200b", "")
 
+            # Replace Excel tab indentation
+            text = text.replace("\t", " ")
+
             prefix = ""
             suffix = ""
 
@@ -119,7 +287,95 @@ def extract_cell_formatting(cell):
     return str(value)
 
 
-def parse_workbook(citizen_data: dict, input_dict: dict, binary_excel: bytes, block_metadata: dict) -> list[dict]:
+def parse_workbook(binary_excel: bytes) -> list[dict]:
+    """
+    Pure Excel parser.
+
+    Extracts blocks and their entries from the workbook without applying
+    any business logic, metadata, or custom functions.
+
+    Args:
+        binary_excel (bytes): Excel workbook content.
+
+    Returns:
+        list[dict]: Raw extracted block structures.
+    """
+
+    wb = load_workbook(BytesIO(binary_excel), rich_text=True)
+
+    parsed_blocks = []
+    current_block = None
+
+    # ----------------------------------------
+    # Parse workbook sheets
+    # ----------------------------------------
+    for sheet_name in wb.sheetnames:
+
+        if not sheet_name.startswith("Blok"):
+            continue
+
+        ws = wb[sheet_name]
+        rows = list(ws.iter_rows())
+
+        for i, row in enumerate(rows):
+
+            col_a_cell = row[0] if len(row) > 0 else None
+            col_b_cell = row[1] if len(row) > 1 else None
+
+            col_a = col_a_cell.value if col_a_cell else None
+            col_b = extract_cell_formatting(col_b_cell) if col_b_cell else None
+
+            # ----------------------------------------
+            # Detect block header
+            # ----------------------------------------
+            if isinstance(col_a, str):
+
+                match = BLOCK_HEADER_PATTERN.match(col_a)
+
+                if match:
+
+                    block_id = match.group(1).replace(" ", "").strip()
+
+                    # Mapping key from column C in next row
+                    next_row = rows[i + 1] if i + 1 < len(rows) else None
+                    next_col_c = None
+
+                    if next_row and len(next_row) > 2:
+                        next_col_c = next_row[2].value
+
+                    current_block = {
+                        "block_id": block_id,
+                        "title": col_a,
+                        "mapping": str(next_col_c).strip() if next_col_c else None,
+                        "entries": {}
+                    }
+
+                    parsed_blocks.append(current_block)
+
+                    continue
+
+            if not current_block:
+                continue
+
+            # ----------------------------------------
+            # Parse entries
+            # ----------------------------------------
+            if col_a and col_b:
+
+                entry_text = col_b.strip()
+
+                # Skip "Ingen tekst"
+                if normalize_key(entry_text) == "ingentekst":
+                    continue
+
+                key = str(col_a)
+
+                current_block["entries"][key] = entry_text
+
+    return parsed_blocks
+
+
+def parse_workbook_old(citizen_data: dict, binary_excel: bytes, block_metadata: dict) -> list[dict]:
     """
     Parse the Excel template into structured block definitions used by the skabelonmotor.
 
@@ -137,7 +393,6 @@ def parse_workbook(citizen_data: dict, input_dict: dict, binary_excel: bytes, bl
 
     Args:
         citizen_data (dict): Citizen data used by custom block handlers.
-        input_dict (dict): Additional input values used during block generation.
         binary_excel (bytes): Excel workbook content.
         block_metadata (dict): Configuration describing block conditions and handlers.
 
@@ -222,7 +477,6 @@ def parse_workbook(citizen_data: dict, input_dict: dict, binary_excel: bytes, bl
                         if func:
                             func(
                                 citizen_data,
-                                input_dict,
                                 current_block
                             )
 
@@ -282,7 +536,6 @@ def parse_workbook(citizen_data: dict, input_dict: dict, binary_excel: bytes, bl
             if func:
                 func(
                     citizen_data,
-                    input_dict,
                     current_block
                 )
 
@@ -329,4 +582,7 @@ def normalize_key(value: str) -> str:
         .replace("ø", "oe")
         .replace("å", "aa")
         .replace("æ", "ae")
+        .replace("?", "")
+        .replace("-", "")
+        .replace("_", "")
     )
