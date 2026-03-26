@@ -3,12 +3,12 @@
 from helpers import helper_functions
 
 
-def handle_custom_koerselstyper(citizen_data: dict, block: dict):
+def handle_custom_koerselstyper(item_data: dict, block: dict):
     """
-    Generate dynamic text for the "Kørselstype" block based on the transport rows in citizen_data["koerselsraekker"].
+    Generate dynamic text for the "Kørselstype" block based on the transport rows in item_data["koerselsraekker"].
 
     Args:
-        citizen_data (dict): Citizen data containing transport rows.
+        item_data (dict): Citizen data containing transport rows.
         block (dict): Parsed block that will be modified.
 
     Returns:
@@ -16,14 +16,14 @@ def handle_custom_koerselstyper(citizen_data: dict, block: dict):
     """
 
     # All configured transport rows for the child
-    koerselsraekker = citizen_data.get("koerselsraekker", {})
+    koerselsraekker = item_data.get("koerselsraekker", {})
 
     # ----------------------------------------
     # Ophør overrides everything
     # ----------------------------------------
     # If a termination date exists we ignore transport rows and generate a simple termination sentence.
-    if citizen_data.get("ophoers_dato"):
-        text = f"Den nuværende kørsel ophører pr. {citizen_data['ophoers_dato']}."
+    if item_data.get("ophoers_dato"):
+        text = f"Den nuværende kørsel ophører pr. {item_data['ophoers_dato']}."
 
         block["mapping"] = "Ophør"
         block["entries"] = {"Ophør": text}

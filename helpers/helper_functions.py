@@ -2,10 +2,10 @@
 Utility functions used by the skabelonmotor Excel parser.
 """
 
+import base64
+import copy
 import os
 import re
-import copy
-import base64
 import urllib.parse
 
 from datetime import datetime
@@ -25,8 +25,13 @@ from sqlalchemy import create_engine, text
 BLOCK_HEADER_PATTERN = re.compile(r"^Blok\s+([0-9]+(?:\.\s*[0-9]+)?[a-zA-Z]?)")
 
 
-def resolve_blocks(blocks: list[dict], item_data: dict, block_metadata: dict):
+def resolve_blocks(blocks: list[dict], block_metadata: dict, item_data: dict):
+    """
+    Some blocks in the template block data need a custom key or function or similar to be able to be properly handled by the skabelonmotor.
+    This helper function is responsible for looping through the retrieved template block data, and handling custom keys and similar requirements.
+    """
 
+    # We loop through each block and check if the block_id is in any of the specified custom handlers
     for block in blocks:
         block_id = block.get("block_id")
 
@@ -40,6 +45,8 @@ def resolve_blocks(blocks: list[dict], item_data: dict, block_metadata: dict):
 
         # -------------------------
         # COPY
+        # If the block_id is specified in the copy section, we copy the mapping, entries, and condition from the specified copy block
+        # This should always be from a block that is handled earlier than the block specified in the copy section of the block_metadata
         # -------------------------
         if block_id in block_metadata.get("copy", {}):
             source_id = block_metadata["copy"][block_id]
@@ -135,6 +142,11 @@ def read_sql(query: str = "", params: dict = None, conn_string: str = "") -> pd.
 
 
 def replace_template_placeholders(template_bytes: str, data: dict) -> bytes:
+    """
+    This function replaces placeholders in the retrieved docx template
+    It loops through the paragraphs in the word template, looks for the pattern "{{some_text}}
+    If any are found, it looks for a key with the same name as the found text inside the {{ }} pattern
+    """
 
     doc = Document(BytesIO(template_bytes))
 
@@ -150,13 +162,9 @@ def replace_template_placeholders(template_bytes: str, data: dict) -> bytes:
     # Replace placeholders in tables
     # -------------------------
     for table in doc.tables:
-
         for row in table.rows:
-
             for cell in row.cells:
-
                 for paragraph in cell.paragraphs:
-
                     text = paragraph.text
 
                     # Find all {{...}} placeholders
@@ -167,7 +175,6 @@ def replace_template_placeholders(template_bytes: str, data: dict) -> bytes:
                         normalized_placeholder = normalize_key(match)
 
                         if normalized_placeholder in normalized_data:
-
                             value = normalized_data[normalized_placeholder]
 
                             # Replace original (not normalized!) placeholder
@@ -230,7 +237,6 @@ def extract_cell_formatting(cell):
         parts = []
 
         for block in value:
-
             text = block.text or ""
             font = block.font
 
@@ -247,7 +253,6 @@ def extract_cell_formatting(cell):
             suffix = ""
 
             if font:
-
                 # Bold
                 if font.b:
                     prefix += "<strong>"
