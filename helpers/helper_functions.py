@@ -4,6 +4,7 @@ Utility functions used by the skabelonmotor Excel parser.
 
 import base64
 import copy
+import logging
 import os
 import re
 import urllib.parse
@@ -20,6 +21,8 @@ import pandas as pd
 
 from sqlalchemy import create_engine, text
 
+logger = logging.getLogger(__name__)
+
 # Regex used to detect block headers such as:
 # "Blok 1", "Blok 3.1", "Blok 7.2a"
 BLOCK_HEADER_PATTERN = re.compile(r"^Blok\s+([0-9]+(?:\.\s*[0-9]+)?[a-zA-Z]?)")
@@ -30,6 +33,8 @@ def resolve_blocks(blocks: list[dict], block_metadata: dict, item_data: dict):
     Some blocks in the template block data need a custom key or function or similar to be able to be properly handled by the skabelonmotor.
     This helper function is responsible for looping through the retrieved template block data, and handling custom keys and similar requirements.
     """
+
+    blocks = copy.deepcopy(blocks)
 
     # We loop through each block and check if the block_id is in any of the specified custom handlers
     for block in blocks:
@@ -134,58 +139,145 @@ def read_sql(query: str = "", params: dict = None, conn_string: str = "") -> pd.
         return df
 
     except Exception as e:
-        print()
-        print("SQL error:", e)
-        print()
+        logger.info(f"SQL error: {e}")
 
         raise
 
 
 def replace_template_placeholders(template_bytes: str, data: dict) -> bytes:
     """
-    This function replaces placeholders in the retrieved docx template
-    It loops through the paragraphs in the word template, looks for the pattern "{{some_text}}
-    If any are found, it looks for a key with the same name as the found text inside the {{ }} pattern
+    Replaces all {{placeholders}} in a DOCX template with values from `data`.
+
+    The function parses the document structure (paragraphs, tables, headers, footers)
+    and safely replaces placeholders without breaking formatting, images, or Word fields.
+    It handles cases where placeholders are split across multiple runs (a common Word behavior).
+    Returns the updated document as a base64-encoded string.
     """
 
     doc = Document(BytesIO(template_bytes))
 
-    # -------------------------
-    # Pre-normalize data keys
-    # -------------------------
+    # Normalize keys so template placeholders and data keys match consistently
     normalized_data = {
         normalize_key(k): str(v)
         for k, v in data.items()
+        if v is not None
     }
 
+    def replace_in_paragraph(paragraph):
+        """
+        Replaces placeholders inside a single paragraph.
+
+        Word may split a placeholder like {{key}} across multiple runs,
+        so we merge consecutive runs when detecting '{{' until '}}' is found.
+        This ensures correct replacement while preserving formatting and embedded elements.
+        """
+
+        runs = paragraph.runs
+        i = 0
+
+        # Iterate through runs manually so we can merge forward when needed
+        while i < len(runs):
+
+            # Detect start of a placeholder
+            if "{{" in runs[i].text:
+
+                full_text = runs[i].text
+                j = i
+
+                # Merge subsequent runs until we find the closing '}}'
+                while "}}" not in full_text and j + 1 < len(runs):
+                    j += 1
+                    full_text += runs[j].text
+
+                # Find all placeholders inside the merged text
+                matches = re.findall(r"\{\{(.*?)\}\}", full_text)
+
+                for match in matches:
+                    normalized_placeholder = normalize_key(match)
+
+                    # Replace only if we have matching data
+                    if normalized_placeholder in normalized_data:
+                        value = normalized_data[normalized_placeholder]
+                        full_text = full_text.replace(f"{{{{{match}}}}}", value)
+
+                # Write updated text back to the FIRST run
+                runs[i].text = full_text
+
+                # Clear the remaining merged runs to avoid duplicate content
+                for k in range(i + 1, j + 1):
+                    runs[k].text = ""
+
+                # Skip ahead to avoid reprocessing merged runs
+                i = j
+
+            i += 1
+
+    def replace_in_table(table):
+        """
+        Recursively replaces placeholders inside tables.
+
+        Word documents often store layout (especially headers) inside tables,
+        including nested tables. This function ensures all cells and nested
+        structures are processed so no placeholders are missed.
+        """
+
+        for row in table.rows:
+            for cell in row.cells:
+
+                # Process normal paragraphs inside the cell
+                for paragraph in cell.paragraphs:
+                    replace_in_paragraph(paragraph)
+
+                # Recursively process nested tables (Word supports this)
+                for nested_table in cell.tables:
+                    replace_in_table(nested_table)
+
     # -------------------------
-    # Replace placeholders in tables
+    # Body paragraphs
+    # -------------------------
+    for paragraph in doc.paragraphs:
+        replace_in_paragraph(paragraph)
+
+    # -------------------------
+    # Body tables
     # -------------------------
     for table in doc.tables:
         for row in table.rows:
             for cell in row.cells:
                 for paragraph in cell.paragraphs:
-                    text = paragraph.text
+                    replace_in_paragraph(paragraph)
 
-                    # Find all {{...}} placeholders
-                    matches = re.findall(r"\{\{(.*?)\}\}", text)
+    # -------------------------
+    # Headers (including first page header)
+    # -------------------------
+    for section in doc.sections:
 
-                    for match in matches:
+        # Standard header
+        for paragraph in section.header.paragraphs:
+            replace_in_paragraph(paragraph)
 
-                        normalized_placeholder = normalize_key(match)
+        for table in section.header.tables:
+            replace_in_table(table)
 
-                        if normalized_placeholder in normalized_data:
-                            value = normalized_data[normalized_placeholder]
+        # First-page header (used when "different first page" is enabled)
+        for paragraph in section.first_page_header.paragraphs:
+            replace_in_paragraph(paragraph)
 
-                            # Replace original (not normalized!) placeholder
-                            text = text.replace(f"{{{{{match}}}}}", value)
+        for table in section.first_page_header.tables:
+            replace_in_table(table)
 
-                    paragraph.text = text
+    # -------------------------
+    # Footers
+    # -------------------------
+    for section in doc.sections:
+        for paragraph in section.footer.paragraphs:
+            replace_in_paragraph(paragraph)
 
-    # Save to buffer
+    # Save modified document to memory buffer
     buffer = BytesIO()
     doc.save(buffer)
 
+    # Return as base64 (useful for APIs / transport)
     template_b64 = base64.b64encode(buffer.getvalue()).decode()
 
     return template_b64

@@ -23,14 +23,14 @@ logger = logging.getLogger(__name__)
 # ╔══════════════════════════════════════════════╗
 # ║ 🔥 REMOVE BEFORE DEPLOYMENT (TEMP OVERRIDES) 🔥 ║
 # ╚══════════════════════════════════════════════╝
-# import requests
-# import urllib3
-# urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-# _old_request = requests.Session.request
-# def unsafe_request(self, *args, **kwargs):
-#     kwargs['verify'] = False
-#     return _old_request(self, *args, **kwargs)
-# requests.Session.request = unsafe_request
+import requests
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+_old_request = requests.Session.request
+def unsafe_request(self, *args, **kwargs):
+    kwargs['verify'] = False
+    return _old_request(self, *args, **kwargs)
+requests.Session.request = unsafe_request
 # ╔══════════════════════════════════════════════╗
 # ║ 🔥 REMOVE BEFORE DEPLOYMENT (TEMP OVERRIDES) 🔥 ║
 # ╚══════════════════════════════════════════════╝
@@ -155,6 +155,13 @@ if __name__ == "__main__":
 
     prod_workqueue = ats.workqueue()
     process = ats.process
+
+    ### DELETE
+    items = prod_workqueue.get_item_by_reference(reference="2301155000_2026_03_20_11_15_34")
+    item = items[0]
+    print(item)
+    item = item.update_status(status="new")
+    ### DELETE
 
     if "--queue" in sys.argv:
         asyncio.run(populate_queue(prod_workqueue))

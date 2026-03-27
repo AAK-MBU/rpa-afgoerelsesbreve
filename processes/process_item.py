@@ -1,6 +1,7 @@
 """Module to handle item processing"""
 # from mbu_rpa_core.exceptions import ProcessError, BusinessError
 
+import datetime
 import json
 import logging
 import re
@@ -123,9 +124,12 @@ def process_item(item_data: dict, item_reference: str):
             process_name,
             word_template,
             workbook_json
-        FROM rpa.Templates
-        WHERE process_name = :process_name
-        ORDER BY last_updated DESC;
+        FROM
+            rpa.Templates
+        WHERE
+            process_name = :process_name
+        ORDER BY
+            last_updated DESC;
     """
 
     params = {
@@ -143,6 +147,9 @@ def process_item(item_data: dict, item_reference: str):
 
     row = df.iloc[0]
 
+    request_data["DOKUMENTNUMMER"] = "1232543åperotdlfm"
+    request_data["dags_dato"] = datetime.datetime.now().date().isoformat()
+
     # Retrieve the docx template and replace any placeholders
     template_binary_docx = row["word_template"]
     template_b64 = helper_functions.replace_template_placeholders(template_bytes=template_binary_docx, data=request_data)
@@ -158,6 +165,7 @@ def process_item(item_data: dict, item_reference: str):
     # print()
     # print()
     # print()
+    # import sys
     # sys.exit()
 
     print()
@@ -171,7 +179,7 @@ def process_item(item_data: dict, item_reference: str):
             "template_b64": template_b64,
         }
 
-        url = "http://127.0.0.1:8000/skabelonmotor/api/letter_creation/create_text"
+        url = "http://localhost:8000/letter_creation/create_letter"
 
         response = requests.post(url, json=request, timeout=10)
         response.raise_for_status()

@@ -7,8 +7,7 @@
          "Ansøgning":"Børn og Unge har den<span style=\"color:#0F9ED5\"> {modtagelsesdato}</span> modtaget din ansøgning om kørsel til <span style=\"color:#0F9ED5\">{barnets_fulde_navn} </span>(<span style=\"color:#0F9ED5\">{barnets_cpr}</span>), som går på {<span style=\"color:#0F9ED5\">personligt_klassetrin}</span>. klassetrin på {<span style=\"color:#0F9ED5\">skolens_navn}</span>. Denne bevilling erstatter alle tidligere bevillinger til kørsel mellem skole og hjem.",
          "Revurdering":"Børn og Unge har den <span style=\"color:#0F9ED5\">D.D.</span> revurderet dit barns, <span style=\"color:#0F9ED5\">{barnets_fulde_navn}</span> (<span style=\"color:#0F9ED5\">{barnets_cpr}</span>) bevilling til kørsel. <span style=\"color:#0F9ED5\">{barnets_fornavn}</span> går på <span style=\"color:#0F9ED5\">{personligt_klassetrin}</span>. klassetrin på <span style=\"color:#0F9ED5\">{skole}</span>. Denne bevilling erstatter alle tidligere bevillinger til kørsel mellem skole og hjem.\n\nFrem til den <span style=\"color:#0F9ED5\">{koersel_startdato}</span> fortsætter den nuværende kørsel uændret.",
          "Midlertidig kørsel":"Børn og Unge har den <span style=\"color:#0F9ED5\">{modtagelsesdato}</span> modtaget din ansøgning om midlertidig kørsel til <span style=\"color:#0F9ED5\">{barnets_fulde_navn}</span> (<span style=\"color:#0F9ED5\">{barnets_cpr}</span>), i forbindelse med <span style=\"color:#E87331\">Årsag</span>. <span style=\"color:#0F9ED5\">{barnets_fornavn}</span> går på <span style=\"color:#0F9ED5\">{skole}</span>."
-      },
-      "condition":"equals"
+      }
    },
    {
       "block_id":"1.2",
@@ -16,8 +15,7 @@
       "mapping":"Befordringsudvalg",
       "entries":{
          "Dato for befordringsudvalgsmde":"<em>Bevillingen</em> er <u>behandlet</u> i <u>befordringsudvalget</u> den <span style=\"color:#0F9ED5\">{modtagelsesdato}</span>, hvor to <strike>pædagogiske</strike> konsulenter og en psykolog repræsenterer den PPR-faglige viden. Denne bevilling erstatter alle tidligere bevillinger til kørsel mellem skole og hjem.\n\nUdvalget indhenter desuden information fra skolen, for at kunne træffe afgørelse om <span style=\"color:#0F9ED5\">{barnets_fornavn}</span>s kørselstilbud."
-      },
-      "condition":"has_value"
+      }
    },
    {
       "block_id":"2.1",
@@ -42,8 +40,7 @@
          "Midlertidig kørsel afslag: § 26, stk. 2 (brækket ben folkeskole)":"<strong>Afgørelse om kørsel\n</strong>Børn og Unge har truffet afgørelse om, at {<span style=\"color:#0F9ED5\">barnets_fornavn</span>} ikke kan bevilges midlertidig kørsel mellem folkeregisteradressen {<span style=\"color:#0F9ED5\">folkeregisteradresse</span>} og {<span style=\"color:#0F9ED5\">skole</span>}, da {<span style=\"color:#0F9ED5\">barnets_fornavn</span>} ikke er omfattet af Børn og Unges befordringsforpligtelse jf. folkeskoleloven § 26.",
          "Midlertidig kørsel bevilling: § 10 (brækket ben ungdomssuddannelse)":"<strong>Afgørelse om kørsel\n</strong>Børn og Unge har truffet afgørelse om, at {<span style=\"color:#0F9ED5\">barnets_fornavn</span>} bevilges midlertidig kørsel mellem folkeregisteradressen {<span style=\"color:#0F9ED5\">folkeregisteradresse</span>} og {<span style=\"color:#0F9ED5\">skole</span>}, da {<span style=\"color:#0F9ED5\">barnets_fornavn</span>} er omfattet af Børn og Unges befordringsforpligtelse jf. bekendtgørelse om lov om befordringsrabat til uddannelsessøgende § 10.",
          "Midlertidig kørsel afslag: § 10 (brækket ben ungdomssuddannelse)":"<strong>Afgørelse om kørsel\n</strong>Børn og Unge har truffet afgørelse om, at {<span style=\"color:#0F9ED5\">barnets_fornavn</span>} ikke kan bevilges midlertidig kørsel mellem folkeregisteradressen {<span style=\"color:#0F9ED5\">folkeregisteradresse</span>} og {<span style=\"color:#0F9ED5\">skole</span>}, da {<span style=\"color:#0F9ED5\">barnets_fornavn</span>} ikke er omfattet af Børn og Unges befordringsforpligtelse jf. bekendtgørelse om lov om befordringsrabat til uddannelsessøgende § 10."
-      },
-      "condition":"equals"
+      }
    },
    {
       "block_id":"2.2",
@@ -52,17 +49,17 @@
       "entries":{
          "Befordringsudvalg: Afslag / fastholdelse":"<strong>Afgørelse om kørsel\n</strong>Det er udvalgets vurdering, at den nuværende kørselstype <span style=\"color:#0F9ED5\">{koerselstype}</span> er det rette kørselstilbud til <span style=\"color:#0F9ED5\">{barnets_fornavn}</span>. Derfor fastholdes den tidligere fremsendte afgørelse af <span style=\"color:#0F9ED5\">Dato for tidligere afgørelse</span>, hvor <span style=\"color:#0F9ED5\">{barnets_fornavn}</span>s bevilges <span style=\"color:#0F9ED5\">{koerselstype}</span>.",
          "Befordringsudvalg: Ændring i bevilling":"<strong>Afgørelse om kørsel\n</strong>Det er udvalgets vurdering, at <span style=\"color:#0F9ED5\">{koerselstype}</span> er det rette kørselstilbud til <span style=\"color:#0F9ED5\">{barnets_fornavn}</span>. Derfor ændres den tidligere fremsendte afgørelse af <span style=\"color:#0F9ED5\">Dato for tidligere afgørelse</span>, hvor <span style=\"color:#0F9ED5\">{barnets_fornavn}</span>s bevilges <span style=\"color:#0F9ED5\">{koerselstype}</span>."
-      },
-      "condition":"equals"
+      }
    },
    {
       "block_id":"3.1",
       "title":"Blok 3.1: Kørselstype (Rute-, skåne-, solokørsel, egen befordring, skolerejsekort, kombination mv.)",
-      "mapping":"Flere kørselstyper",
+      "mapping":"Kørselstype",
       "entries":{
-         "Flere kørselstyper":"Kørslen bevilges i følgende form:\n• rutekoersel [Morgen] fra 01-01-2026 til 01-01-2027.\n• skolerejsekort [Eftermiddag] fra 01-01-2026 til 01-01-2027."
-      },
-      "condition":"custom"
+         "Én kørselstype":"Kørslen bevilges i form af {<span style=\"color:#0F9ED5\">koerselstype}</span> [{<span style=\"color:#0F9ED5\">tidspunkt}</span>, <span style=\"color:#0F9ED5\">{dage}</span>] fra {<span style=\"color:#0F9ED5\">koersel_startdato}</span> til {<span style=\"color:#0F9ED5\">koerselstype_slutdato}</span>.",
+         "Flere kørselstyper":"Kørslen bevilges i følgende form:\n• <span style=\"color:#0F9ED5\">{koerselstype} </span>[<span style=\"color:#0F9ED5\">{tidspunkt}</span>, <span style=\"color:#0F9ED5\">{dage}</span>]<span style=\"color:#0F9ED5\"> </span>fra<span style=\"color:#0F9ED5\"> {koersel_startdato} </span>til <span style=\"color:#0F9ED5\">{koerselstype_slutdato}</span>. \n•<span style=\"color:#0F9ED5\"> {koerselstype} </span>[<span style=\"color:#0F9ED5\">{tidspunkt}</span>, <span style=\"color:#0F9ED5\">{dage}</span>] fra <span style=\"color:#0F9ED5\">{koersel_startdato} </span>til <span style=\"color:#0F9ED5\">{koerselstype_slutdato}</span>.",
+         "Ophør":"Den nuværende kørsel ophører pr. {<span style=\"color:#E87331\">ophoersdato}</span>."
+      }
    },
    {
       "block_id":"3.2",
@@ -70,8 +67,7 @@
       "mapping":"Revurdering",
       "entries":{
          "Revurderingsdato":"Herefter revurderes kørslen."
-      },
-      "condition":"has_value"
+      }
    },
    {
       "block_id":"4",
@@ -79,18 +75,16 @@
       "mapping":"SFO",
       "entries":{
          "Ja":"Vi bevilger hermed kørsel mellem SFO og folkeregisteradressen på fastlagte køretider. Kørslen hjem om eftermiddagen fra SFO vil blive planlagt på et antal faste tidspunkter. Det betyder, at du ikke kan vælge et bestemt kørselstidspunkt hjem fra SFO."
-      },
-      "condition":"has_value"
+      }
    },
    {
       "block_id":"5",
       "title":"Blok 5: Ændring i barnets situation (Alle breve)",
-      "mapping":"Bevilling",
+      "mapping":"Afgørelsesbrev?",
       "entries":{
          "Bevilling":"Hvis <span style=\"color:#0F9ED5\">{barnets_fornavn}</span>s situation ændrer sig (fx adresse- eller skoleskift), skal du ansøge om en ny bevilling.",
          "Afslag":"Hvis <span style=\"color:#0F9ED5\">{barnets_fornavn}</span>s situation ændrer sig (fx adresse- eller skoleskift), kan du ansøge om en ny bevilling."
-      },
-      "condition":"custom"
+      }
    },
    {
       "block_id":"6.1",
@@ -103,8 +97,7 @@
          "Egen befordring":"<strong>Information om egen befordring\n</strong>Godtgørelse for egen befordring bliver beregnet på baggrund af den korteste rute mellem skole og hjem i køreafstand med bil uanset hvilken rute, man vælger at køre. Godtgørelsen er opgjort til <span style=\"color:#0F9ED5\">Km i bil</span> km (korteste kørerute) – svarende til, at du maksimalt kan indberette <span style=\"color:#0F9ED5\">Km pr dag (bil)</span> km pr. dag og kun for de ture, hvor barnet er i bilen. Kørslen bliver godtgjort efter statens lave takst.\n\nBefordringsgodtgørelsen bliver i henhold til ansøgningen udbetalt til <span style=\"color:#0F9ED5\">Navn på ansøger</span> (<span style=\"color:#0F9ED5\">Ansøger-cpr</span>). \n<strong>\n</strong>Du vil i slutningen af hver måned modtage et link til den elektroniske formular, hvor du skal indberette de kørte kilometer for den pågældende måned, hvis du har kørt dit barn til og fra skole. Linket bliver sendt til din digitale postkasse. Du logger ind på linket med MitID.\n \nNår du har udfyldt formularen med datoer og antal kørte kilometer, beregnes det automatisk, hvilket beløb, du skal have udbetalt. Vær opmærksom på, at dette kun er til din egen kontrol af de indtastede data. Det vil ikke nødvendigvis være det beløb, der udbetales til din NemKonto, da vi efterfølgende kontrollerer de indtastede data. \n\nBemærk, at du bliver bedt om at indberette hver måned, dog ikke for juli. Der bliver ikke udbetalt befordringsgodtgørelse i skolernes sommerferie eller på skolefrie dage.",
          "Brækket ben (ungdomsuddannelse) ":"<strong>Information om kørslen\n</strong>Der er ikke kørsel i ferier og på skolefridage. Kørsel til sygehus, læge eller behandling mm. indgår ikke i ydelsen. Kørslen bliver varetaget af Aarhus Kommunes Kørselskontor som får tilsendt <span style=\"color:#0F9ED5\">{barnets_fornavn}</span>s skema. \n\nSkulle der opstå ændringer i <span style=\"color:#0F9ED5\">{barnets_fornavn}</span>s skema eller <span style=\"color:#0F9ED5\">{barnets_fornavn} </span>ikke har brug for en bestilt taxatur, skal du hurtigst muligt kontakte Kørselskontoret herom på telefon 89 40 60 10 eller sende en mail til befordring@aarhus.dk. Der kan afbestilles kørsel fra kl. 06.00.\n\nDer skal gives besked om ændringer i kørslen hurtigst muligt og senest kl. 12.00 dagen før. Kørselskontoret vil forsøge at imødekomme akutte ændringer der indmeldes med kortere varsel, men det er ikke altid muligt. \n\nHvis taxaen skulle køre forgæves (f.eks. hvis <span style=\"color:#0F9ED5\">{barnets_fornavn}</span> ikke er klar til aftalt tid, sover over sig o.l.) og derfor ikke kommer med på morgenturen, vil eftermiddagsturen pr. automatik blive aflyst. Ligeledes vil det ikke være muligt at få en ny taxa, hvis <span style=\"color:#0F9ED5\">{barnets_fornavn} </span>f.eks. ikke når taxaen om eftermiddagen.\n\nDer er tilmeldt SMS service på mobil nr. <span style=\"color:#0F9ED5\">Modtager telefonnummer</span>. <span style=\"color:#0F9ED5\">{barnets_fornavn} </span>vil modtage en sms fra Kørselskontoret om, hvornår <span style=\"color:#0F9ED5\">{barnets_fornavn} </span>kan forvente at blive hentet. Har du spørgsmål til planlægning af kørslen, kan du kontakte Kørselskontoret på tlf. 89 40 60 10.",
          "Brækket ben (folkeskole)":"<strong>Information om kørslen\n</strong>Der er ikke kørsel i ferier og på skolefridage. Kørsel til sygehus, læge mm. indgår ikke i ydelsen. Kørslen bliver varetaget af Aarhus Kommunes Kørselskontor som får tilsendt {<span style=\"color:#0F9ED5\">barnets_fornavn</span>}s skema.  \n \nDer køres kun til én adresse ({<span style=\"color:#0F9ED5\">barnets_fornavn</span>}s folkeregisteradresse). \n \nHvis dit barn er under 135 cm, skal det sidde i selepude under kørslen, som du selv skal anskaffe og medbringe. \n \nSkulle der opstå ændringer i <span style=\"color:#0F9ED5\">{barnets_fornavn}</span>s skema eller <span style=\"color:#0F9ED5\">{barnets_fornavn}</span> ikke har brug for en taxatur, der er bestilt, skal du hurtigst muligt kontakte Kørselskontoret herom på tlf. 89 40 60 10 eller sende en mail til befordring@aarhus.dk. Der kan afbestilles kørsel fra kl. 06.00. \n \nHvis taxaen skulle køre forgæves (f.eks. hvis <span style=\"color:#0F9ED5\">{barnets_fornavn}</span> ikke er klar til aftalt tid, sover over sig o.l.) og derfor ikke kommer med på morgenturen, vil eftermiddagsturen pr. automatik blive aflyst. Ligeledes vil det ikke være muligt at få en ny taxa, hvis<span style=\"color:#0F9ED5\"> {barnets_fornavn}</span> f.eks. ikke når taxaen om eftermiddagen. \n \nDer er tilmeldt SMS service på mobil nr. <span style=\"color:#0F9ED5\">Modtager telefonnummer</span>. Du vil modtage en sms fra Kørselskontoret om, hvornår <span style=\"color:#0F9ED5\">{barnets_fornavn}</span> kan forvente at blive hentet. Har du spørgsmål til planlægning af kørslen, kan du kontakte Kørselskontoret på tlf. 89 40 60 10."
-      },
-      "condition":"equals"
+      }
    },
    {
       "block_id":"6.2",
@@ -115,8 +108,7 @@
          "Co-driver":"En kørsel med co-driver er en bil, hvor der udover chaufføren er en anden voksen til stede under kørslen. Co-driveren er ansat af Kørselskontoret.",
          "Egen ledsager":"En kørsel med egen ledsager er en bil, hvor der udover chaufføren er en pårørende eller anden voksen, som familien selv stiller til rådighed, til stede under kørslen.",
          "Fast sæde":"En kørsel med fast forsæde er en bil, hvor {<span style=\"color:#0F9ED5\">barnets_fornavn</span>}<span style=\"color:#0F9ED5\"> </span>skal sidde på et fast sæde i vognen under kørslen."
-      },
-      "condition":"equals"
+      }
    },
    {
       "block_id":"6.3",
@@ -129,8 +121,7 @@
          "Kørestol":"Du har i ansøgning om kørsel til {<span style=\"color:#0F9ED5\">barnets_fornavn</span>} angivet, at {<span style=\"color:#0F9ED5\">barnets_fornavn</span>} skal bruge kørestol under kørslen eller have kørestolen opbevaret under kørslen.",
          "Krykker":"Du har i ansøgning om kørsel til {<span style=\"color:#0F9ED5\">barnets_fornavn</span>} angivet, at {<span style=\"color:#0F9ED5\">barnets_fornavn</span>} bruger krykker, som skal opbevares under kørslen.",
          "Autostol":"Du har i ansøgning om kørsel til {<span style=\"color:#0F9ED5\">barnets_fornavn</span>} angivet, at {<span style=\"color:#0F9ED5\">barnets_fornavn</span>} skal bruge autostol under kørslen. Du skal selv sørge for, at barnet har en autostol og at denne fragtes til og fra bilen."
-      },
-      "condition":"equals"
+      }
    },
    {
       "block_id":"7.1",
@@ -155,8 +146,7 @@
          "Midlertidig kørsel afslag: § 26, stk. 2 (brækket ben folkeskole)":"<strong>Begrundelse for afgørelsen\n</strong>Efter § 26, stk. 2 i folkeskoleloven har kommunen ansvar for at sørge for befordring til og fra skole af syge og invaliderede elever. Dette gælder også, såfremt det er tale om midlertidig invaliditet der betyder, at eleven ikke selv kan komme til og fra deres skole i en afgrænset periode.  \n\nVed midlertidig sygdom, som f.eks. brækket ben, kan elever fra folkeskoler ansøge om midlertidig kørsel, hvis de ikke selv kan komme i skole. Midlertidig kørsel kan kun bevilges, hvis eleven er indskrevet på distriktsskolen. \n\nNår en elev er henvist til et undervisningstilbud på en anden skole end distriktsskolen, betragtes henvisningsskolen som distriktsskolen jf. folkeskolelovens § 26, stk. 7. \n\nAfgørelsen er truffet på baggrund af den fremsendte dokumentation, som beskriver behovet for sygekørsel samt angiver en start- og slutdato for perioden.",
          "Midlertidig kørsel bevilling: § 10 (brækket ben ungdomssuddannelse)":"<strong>Begrundelse for afgørelsen\n</strong>Jf. § 10, stk. 1 i bekendtgørelse om lov om befordringsrabat til uddannelsessøgende påhviler det Aarhus Kommune at tilrettelægge transport til elever og studerende, der midlertidigt ikke selv kan komme til og fra deres uddannelsessted på grund af sygdom eller invaliditet.  \n \nVed kortvarig sygdom, som f.eks. brækket ben, kan elever fra ungdomsuddannelser samt grund- og erhvervsuddannelser ansøge om midlertidig kørsel, hvis de ikke selv kan komme i skole.  \n \nAarhus Kommune er forpligtet til at tilrettelægge kørsel for en periode på højst 3 måneder, men er også forpligtet til at tage hensyn til særlige individuelle forhold og eventuel overgang til andre befordringsordninger, herunder eventuel støtte efter anden lovgivning. \n \nJf. § 10, stk. 4 er afgørelsen truffet på baggrund af den fremsendte dokumentation, som beskriver behovet for sygekørsel samt angiver en start- og slutdato for perioden.",
          "Midlertidig kørsel afslag: § 10 (brækket ben ungdomssuddannelse)":"<strong>Begrundelse for afgørelsen\n</strong>Jf. § 10, stk. 1 i bekendtgørelse om lov om befordringsrabat til uddannelsessøgende påhviler det Aarhus Kommune at tilrettelægge transport til elever og studerende, der midlertidigt ikke selv kan komme til og fra deres uddannelsessted på grund af sygdom eller invaliditet.  \n \nVed kortvarig sygdom, som f.eks. brækket ben, kan elever fra ungdomsuddannelser samt grund- og erhvervsuddannelser ansøge om midlertidig kørsel, hvis de ikke selv kan komme i skole.  \n \nAarhus Kommune er forpligtet til at tilrettelægge kørsel for en periode på højst 3 måneder, men er også forpligtet til at tage hensyn til særlige individuelle forhold og eventuel overgang til andre befordringsordninger, herunder eventuel støtte efter anden lovgivning. \n \nJf. § 10, stk. 4 er afgørelsen truffet på baggrund af den fremsendte dokumentation, som beskriver behovet for sygekørsel samt angiver en start- og slutdato for perioden."
-      },
-      "condition":"equals"
+      }
    },
    {
       "block_id":"7.2",
@@ -164,17 +154,15 @@
       "mapping":"Kørselstype",
       "entries":{
          "Skolerejsekort":"Ved transport med offentlig transport vil {<span style=\"color:#0F9ED5\">barnets_fornavn</span>} fra <span style=\"color:#0F9ED5\">{folkeregisteradresse}</span> til <span style=\"color:#0F9ED5\">{skole}</span> have en samlet rejsetid på ca. <span style=\"color:#E87331\">Transporttid i bus</span> min. <span style=\"color:#E87331\">Skift med bus?</span> skift. Vi vurderer at rejsetiden for en elev på <span style=\"color:#0F9ED5\">{personligt_klassetrin}</span>. klassetrin er indenfor rammerne af Aarhus Kommunes serviceniveau for kørsel."
-      },
-      "condition":"equals"
+      }
    },
    {
       "block_id":"7.3",
       "title":"Blok 7.3: Øvrige (Alle breve)",
-      "mapping":"Flere kørselstyper",
+      "mapping":"None",
       "entries":{
-         "Flere kørselstyper":"Kørslen bevilges i følgende form:\n• rutekoersel [Morgen] fra 01-01-2026 til 01-01-2027.\n• skolerejsekort [Eftermiddag] fra 01-01-2026 til 01-01-2027."
-      },
-      "condition":"custom"
+         "Alle breve":"Kopi af blok 3.1 og 3.2"
+      }
    },
    {
       "block_id":"7.4",
@@ -182,38 +170,34 @@
       "mapping":"None",
       "entries":{
          "Alle breve":"Hvis dit barn har behov for kørsel, der ligger udover Børn og Unges serviceniveau for kørsel, fx kørsel til morgen-SFO, klub eller aflastning, kan du søge om kørsel via Familiecenteret i Sociale Forhold og Beskæftigelse. Bemærk at Familiecenteret i udgangspunktet ikke bevilger kørsel mellem skole og hjem."
-      },
-      "condition":"all"
+      }
    },
    {
       "block_id":"8",
       "title":"Blok 8: Partshøring ved påtænkt afgørelse",
-      "mapping":"Bevilling",
+      "mapping":"Afgørelsesbrev",
       "entries":{
          "Påtænkt":"<strong>Du kan komme med partshøringsindlæg \n</strong>Da dette er en orientering om en påtænkt afgørelse, har du mulighed for at indsende et partshøringsindlæg, inden afgørelsen bliver endelig. Hvis du har bemærkninger, som du ønsker, skal indgå i sagen, skal de være os i hænde senest den <span style=\"color:#0F9ED5\">Partshøringsfrist</span>.\n\nDu kan give os dit partshøringsindlæg enten ved at besvare dette brev i din digitale postkasse eller sende en sikker mail til befordring@mbu.aarhus.dk.\n  \n<strong>Dette brev kan blive den endelige afgørelse \n</strong>Hvis vi ikke har modtaget et partshøringsindlæg fra dig senest den <span style=\"color:#0F9ED5\">Partshøringsfrist</span>, vil dette brev få virkning som den endelige afgørelse. Du vil i dette tilfælde ikke modtage et nyt brev fra os med en separat afgørelse."
-      },
-      "condition":"custom"
+      }
    },
    {
       "block_id":"9.1",
       "title":"Blok 9.1: Klagevejledning (Alle breve)",
-      "mapping":"Klagevejledning",
+      "mapping":"Afgørelsesbrev?",
       "entries":{
-         "Klagevejledning ":"<strong>Klagevejledning  \n</strong>Du kan ikke klage over kommunens afgørelse om befordring til en anden administrativ myndighed, jf. folkeskolelovens § 51, stk. 2 (LBK nr. 989 af 27/08/2024).\n\nHvis du ønsker at klage over afgørelsen, kan du gøre det ved at besvare dette brev i din digitale postkasse eller sende en mail til befordring@mbu.aarhus.dk.\n\nHvis du har spørgsmål til afgørelsen, kan du skrive til os via den digitale postkasse eller ved at sende en mail til befordring@mbu.aarhus.dk.\n  \nDu kan finde retsgrundlaget for afgørelsen sidst i dette brev.  \n  \nMed venlig hilsen \n\n<span style=\"color:#0F9ED5\">{sagsbehandler}</span>",
-         "Klagevejledning brækket ben ungdomsuddannelse":"<strong>Klagevejledning \n</strong>Du kan ikke klage over kommunens afgørelse om midlertidig befordring til en anden administrativ myndighed, jf. bekendtgørelse af lov om befordringsrabat til uddannelsessøgende i ungdomsuddannelser m.v. § 16, stk. 1 (LBK nr. 345 af 21/03/2022).\n\nHvis du ønsker at klage over afgørelsen, kan du gøre det ved at besvare dette brev i din digitale postkasse eller sende en mail til befordring@mbu.aarhus.dk.\n\nHvis du har spørgsmål til afgørelsen, kan du skrive til os via den digitale postkasse eller ved at sende en mail til befordring@mbu.aarhus.dk.\n\nDu kan finde retsgrundlaget for afgørelsen sidst i dette brev.\n\nMed venlig hilsen\n\n<span style=\"color:#0F9ED5\">{sagsbehandler}</span>"
-      },
-      "condition":"custom"
+         "Klagevejledning":"<strong>Klagevejledning \n</strong>Du kan ikke klage over kommunens afgørelse om befordring til en anden administrativ myndighed, jf. folkeskolelovens § 51, stk. 2 (LBK nr. 989 af 27/08/2024).\n\nHvis du ønsker at klage over afgørelsen, kan du gøre det ved at besvare dette brev i din digitale postkasse eller sende en mail til befordring@mbu.aarhus.dk.\n\nHvis du har spørgsmål til afgørelsen, kan du skrive til os via den digitale postkasse eller ved at sende en mail til befordring@mbu.aarhus.dk.\n  \nDu kan finde retsgrundlaget for afgørelsen sidst i dette brev.  \n  \nMed venlig hilsen \n\n<span style=\"color:#0F9ED5\">{sagsbehandler}</span>",
+         "Klagevejledning brækket ben ungdomsuddannelse":"<strong>Klagevejledning\n</strong>Du kan ikke klage over kommunens afgørelse om midlertidig befordring til en anden administrativ myndighed, jf. bekendtgørelse af lov om befordringsrabat til uddannelsessøgende i ungdomsuddannelser m.v. § 16, stk. 1 (LBK nr. 345 af 21/03/2022).\n\nHvis du ønsker at klage over afgørelsen, kan du gøre det ved at besvare dette brev i din digitale postkasse eller sende en mail til befordring@mbu.aarhus.dk.\n\nHvis du har spørgsmål til afgørelsen, kan du skrive til os via den digitale postkasse eller ved at sende en mail til befordring@mbu.aarhus.dk.\n\nDu kan finde retsgrundlaget for afgørelsen sidst i dette brev.\n\nMed venlig hilsen\n\n<span style=\"color:#0F9ED5\">{sagsbehandler}</span>"
+      }
    },
    {
       "block_id":"9.2",
       "title":"Blok 9.2: Regler (Alle breve)",
-      "mapping":"Regler standard",
+      "mapping":"Afgørelsesbrev?",
       "entries":{
-         "Regler standard":"<strong>Regler \n</strong>Du kan finde de regler, som Budget og Regnskab har truffet afgørelsen efter i deres fulde længde her: \n• Folkeskoleloven (retsinformation.dk) \n• Bekendtgørelse om befordring af elever i folkeskolen (retsinformation.dk) \n\nDu kan læse om Børn og Unges behandling af dit barns og dine personoplysninger her: Behandling af personoplysninger i Børn og Unge (aarhus.dk)",
-         "Regler § 33, stk. 3 (ungdomsskoleloven)":"<strong>Regler \n</strong>Du kan finde de regler, som Budget og Regnskab har truffet afgørelsen efter i deres fulde længde her:  \n• Folkeskoleloven (retsinformation.dk) \n• Bekendtgørelse om befordring af elever i folkeskolen (retsinformation.dk) \n• Ungdomsskoleloven (retsinformation.dk) \nDu kan læse om Børn og Unges behandling af dit barns og dine personoplysninger her: Behandling af personoplysninger i Børn og Unge (aarhus.dk)",
-         "Regler brækket ben ungdomssuddanelse":"<strong>Regler \n</strong>Du kan finde de regler, som Budget og Regnskab har truffet afgørelsen efter i deres fulde længde her: Bekendtgørelse af lov om befordringsrabat til uddannelsessøgende i ungdomsuddannelser m.v. \n  \nDu kan læse om Børn og Unges behandling af dit barns og dine personoplysninger her: Behandling af personoplysninger i Børn og Unge."
-      },
-      "condition":"custom"
+         "Regler standard":"<strong>Regler\n</strong>Du kan finde de regler, som Budget og Regnskab har truffet afgørelsen efter i deres fulde længde her: \n• <a href=\"https://www.retsinformation.dk/eli/lta/2025/1100#P26\">Folkeskoleloven (retsinformation.dk)</a> \n• <a href=\"https://www.retsinformation.dk/eli/lta/2014/688\">Bekendtgørelse om befordring af elever i folkeskolen (retsinformation.dk)</a> \n\nDu kan læse om Børn og Unges behandling af dit barns og dine personoplysninger her: <a href=\"https://aarhus.dk/om-kommunen/databeskyttelse/behandling-af-personoplysninger-i-boern-og-unge\">Behandling af personoplysninger i Børn og Unge (aarhus.dk)</a>",
+         "Regler § 33, stk. 3 (ungdomsskoleloven)":"<strong>Regler\n</strong>Du kan finde de regler, som Budget og Regnskab har truffet afgørelsen efter i deres fulde længde her:  \n• <a href=\"https://www.retsinformation.dk/eli/lta/2025/1100#P26\">Folkeskoleloven (retsinformation.dk)</a> \n• <a href=\"https://www.retsinformation.dk/eli/lta/2014/688\">Bekendtgørelse om befordring af elever i folkeskolen (retsinformation.dk)</a> \n• <a href=\"https://www.retsinformation.dk/eli/lta/2010/665\">Ungdomsskoleloven (retsinformation.dk)</a> \nDu kan læse om Børn og Unges behandling af dit barns og dine personoplysninger her: <a href=\"https://aarhus.dk/om-kommunen/databeskyttelse/behandling-af-personoplysninger-i-boern-og-unge\">Behandling af personoplysninger i Børn og Unge (aarhus.dk)</a>",
+         "Regler brækket ben ungdomssuddanelse":"<strong>Regler\n</strong>Du kan finde de regler, som Budget og Regnskab har truffet afgørelsen efter i deres fulde længde her: Bekendtgørelse af lov om befordringsrabat til uddannelsessøgende i ungdomsuddannelser m.v.\n\nDu kan læse om Børn og Unges behandling af dit barns og dine personoplysninger her: <a href=\"https://aarhus.dk/om-kommunen/databeskyttelse/behandling-af-personoplysninger-i-boern-og-unge\">Behandling af personoplysninger i Børn og Unge (aarhus.dk)</a>"
+      }
    },
    {
       "block_id":"10",
@@ -227,7 +211,6 @@
          "§ 36, stk. 4 retten til at forblive":"<strong>Retsgrundlag\n</strong>\n<strong>Folkeskoleloven § 26\n</strong>Kommunalbestyrelsen skal sørge for befordring mellem skolen eller brobygningsinstitutionen, jf. kapitel 2 a og kapitel 2 a i lov om kommunal indsats for unge under 25 år, og hjemmet eller dettes nærhed af\n1) børn, der har længere skolevej end 2 1/2 km i børnehaveklasse og på 1.-3. klassetrin, 6 km på 4.-6. klassetrin, 7 km på 7.-9. klassetrin og 9 km i 10. klasse, og\n2) børn, der har kortere skolevej, hvis hensynet til børnenes sikkerhed i trafikken gør det særlig påkrævet.\n\n<em>Stk. 2.</em> Kommunalbestyrelsen skal endvidere sørge for befordring til og fra skole af syge og invaliderede elever.\n\n<em>Stk. 3… \n</em>\n<em>Stk. 6. </em>Bestemmelserne i stk. 1 omfatter ikke elever, som undervises i en anden skole end distriktsskolen, bortset fra elever, der er henvist til undervisning i henhold til § 5, stk. 6 og 7, og § 22. Bestemmelserne i stk. 1 omfatter også elever, der fortsætter skolegangen i en skole, hvortil eleven har været henvist i henhold til § 5, stk. 7. Elever, der ved optagelsen i en skole i en anden kommune end bopælskommunen, jf. § 36, stk. 3, er henvist til undervisning i henhold til § 5, stk. 7, er ikke omfattet af stk. 1. \n<strong>\nFolkeskoleloven § 36\n</strong>Undervisningspligten medfører pligt til at deltage i undervisningen i folkeskolens grundskole eller i en undervisning, der står mål med, hvad der almindeligvis kræves i folkeskolen. \n \n<em>Stk. 2… \n</em> \n<em>Stk. 4. </em>En elev, der er optaget i en skole, har ret til at fortsætte skolegangen i denne skole, jf. dog § 3, stk. 2, og § 22, medmindre der gennemføres ændringer i kommunens skolestruktur, eller eleven overflyttes til en anden skole i medfør af § 52. Dette gælder tillige elever, der flytter til en anden bopæl under skoleforløbet.\n<strong>\nBekendtgørelse om befordring af elever i folkeskolen\n</strong>§ 1. Kommunalbestyrelsens pligt til at sørge for befordring, jf. folkeskolelovens § 26, gælder i forhold til det hjem, hvor barnet er folkeregistreret. Forældre med fælles forældremyndighed og hver sin bopæl kan i de tilfælde, hvor et barn opholder sig lige meget hos begge forældre, og begge forældre bor i skoledistriktet, vælge, til hvilket af de to hjem befordringen skal ske. Hvis kun den ene af forældrene bor i skoledistriktet, gælder kommunens befordringsforpligtelse til dette hjem.\n\n§ 2. Ved opmåling af skolevejen medregnes normalt kun afstanden ad nærmeste offentligt tilgængelig vej eller sti, som eleverne kan færdes på til fods eller på cykel eller knallert hele året mellem hjemmet (udkørsel eller udgang) og den nærmeste indgang til skolens område.\n\n§ 6. Kommunalbestyrelsens befordringsforpligtelse for syge og invaliderede elever, jf. folkeskolelovens § 26, stk. 2, kan opfyldes ved, at eleven, i det omfang eleven er i stand dertil, henvises til at benytte en for skolens øvrige elever etableret befordringsordning eller offentlig transport. Det er en betingelse, at eleven ikke derved får længere ventetid end sammenlagt 60 minutter dagligt. Om nødvendigt må der indrettes særskilt befordring mellem hjemmet og/eller skolen og nærmeste offentlige transport.\n\n<em>Stk. 2.</em> I det omfang eleven er i stand til at befordre sig til og fra skole ved egen hjælp, hvis der stilles en sygecykel, en kørestol eller lignende hjælpemiddel til elevens rådighed, kan kommunalbestyrelsen opfylde sin befordringsforpligtelse ved at afholde udgiften til anskaffelse og vedligeholdelse af det pågældende hjælpemiddel. \n<strong>\nFolkeskoleloven § 51\n</strong>Skolebestyrelsens afgørelser efter § 44, stk. 2-7 og 10, kan ikke indbringes for anden administrativ myndighed.\n\n<em>Stk. 2. </em>Beslutninger og afgørelser, som træffes af kommunalbestyrelsen vedrørende det kommunale skolevæsen, kan ikke indbringes for højere administrativ myndighed, jf. dog stk. 3-6. Børne- og undervisningsministeren kan fastsætte regler om, at andre afgørelser kan indbringes for ministeren.",
          "§ 9, stk. 4 UngiAarhus":"<strong>Retsgrundlag\n\nFolkeskoleloven § 9</strong> \nUd over den undervisning, som skal tilbydes efter §§ 5, 7 og 7 a, kan der tilbydes eleverne på 7.-9. klassetrin undervisning i følgende fag og emner som valgfag: \n1) Tysk. \n2) Fransk. \n3) Spansk. \n4) Billedkunst. \n5) Medier. \n6) Filmkundskab. \n7) Drama. \n8) Musik. \n9) Håndværk og design. \n10) Madkundskab. \n11) Almindelige indvandrersprog for elever med fornødent forhåndskendskab til det pågældende sprog. \n12) Arbejdskendskab. \n \n<em>Stk. 2… \n</em> \n<em>Stk. 4. </em>Skolens leder kan med inddragelse af den ungeindsats, som kommunalbestyrelsen har etableret efter kapitel 1 d i lov om kommunal indsats for unge under 25 år, tilbyde elever med særligt behov herfor undervisningsforløb i 8. og 9. klasse, hvor praktisk og teoretisk indhold kombineres i en undervisning, der kan finde sted på og uden for skolen. Forløbene kan kombineres med introduktion til ungdomsuddannelserne i 8. klasse og brobygning i 9. klasse, som kan have en varighed af op til 4 uger pr. år, inklusive den i § 7 a nævnte introduktion og brobygning, jf. lov om kommunal indsats for unge under 25 år. Undervisningsforløbene kan være af kortere eller længere varighed. Hvis det vurderes at være til elevens bedste, kan fagrækken fraviges bortset fra undervisning i dansk, matematik, engelsk og fysik/kemi. I disse fag skal der undervises i et omfang, så fagenes mål og kravene ved prøverne kan opfyldes. Deltagelse i undervisningsforløb efter denne bestemmelse kan kun finde sted efter aftale med eleven og forældrene, jf. § 54. \n \n<strong>Folkeskoleloven § 26 \n</strong>Kommunalbestyrelsen skal sørge for befordring mellem skolen eller brobygningsinstitutionen, jf. kapitel 2 a og kapitel 2 a i lov om kommunal indsats for unge under 25 år, og hjemmet eller dettes nærhed af \n1) børn, der har længere skolevej end 2 1/2 km i børnehaveklasse og på 1.-3. klassetrin, 6 km på 4.-6. klassetrin, 7 km på 7.-9. klassetrin og 9 km i 10. klasse, og \n2) børn, der har kortere skolevej, hvis hensynet til børnenes sikkerhed i trafikken gør det særlig påkrævet. \n \n<em>Stk. 2… \n</em>  \n<em>Stk. 6.</em> Bestemmelserne i stk. 1 omfatter ikke elever, som undervises i en anden skole end distriktsskolen, bortset fra elever, der er henvist til undervisning i henhold til § 5, stk. 6 og 7, og § 22. Bestemmelserne i stk. 1 omfatter også elever, der fortsætter skolegangen i en skole, hvortil eleven har været henvist i henhold til § 5, stk. 7. Elever, der ved optagelsen i en skole i en anden kommune end bopælskommunen, jf. § 36, stk. 3, er henvist til undervisning i henhold til § 5, stk. 7, er ikke omfattet af stk. 1. \n  \n<strong>Folkeskoleloven § 33 \n</strong>Undervisningspligten medfører pligt til at deltage i undervisningen i folkeskolens grundskole eller i en undervisning, der står mål med, hvad der almindeligvis kræves i folkeskolen. \n \n<em>Stk. 2… \n</em> \n<em>Stk. 3.</em> Undervisningspligten kan endvidere efter det 7. klassetrin opfyldes ved deltagelse i heltidsundervisning i den kommunale ungdomsskole i henhold til lov om ungdomsskoler samt ved deltagelse i undervisningsforløb i henhold til § 9, stk. 4. \n \n<strong>Folkeskoleloven § 51 \n</strong>Skolebestyrelsens afgørelser efter § 44, stk. 2-6 og 9, kan ikke indbringes for anden administrativ myndighed. \n \n<em>Stk. 2.</em> Beslutninger og afgørelser, som træffes af kommunalbestyrelsen vedrørende det kommunale skolevæsen, kan ikke indbringes for højere administrativ myndighed, jf. dog stk. 3-6. Børne- og undervisningsministeren kan fastsætte regler om, at andre afgørelser kan indbringes for ministeren.",
          "Retsgrundlag brækket ben ungdomsuddannelse":"<strong>Retsgrundlag\n</strong>\n<strong>Bekendtgørelse af lov om befordringsrabat til uddannelsessøgende i ungdomsuddannelser m.v.\n</strong>§ 10. Det påhviler den enkelte kommunalbestyrelse i bopælskommunen at tilrettelægge vederlagsfri befordring til uddannelsessøgende og deltagere efter § 2, stk. 1, der midlertidigt ikke er i stand til ved egen hjælp at tilbagelægge vejen mellem bopælen og uddannelsesstedet på grund af sygdom eller invaliditet.\n\n<em>Stk. 2.</em> Kommunalbestyrelsen kan undlade at tilrettelægge befordring i tilfælde, hvor befordringsbehovet er under 1 uges varighed, medmindre der i den pågældende uge afholdes prøver, eksaminer el.lign.\n\n<em>Stk. 3. </em>Kommunalbestyrelsen kan bestemme, at befordring kun tilrettelægges for en periode på højst 3 måneder, men er forpligtet til at tage hensyn til særlige individuelle forhold og eventuel overgang til andre befordringsordninger, herunder eventuel støtte efter anden lovgivning.\n\n<em>Stk. 4. </em>Kommunalbestyrelsen træffer afgørelse på baggrund af en lægeerklæring eller anden sagkyndig erklæring til brug for vurdering af befordringsbehovet. Den uddannelsessøgende eller deltageren indhenter erklæringen. Uddannelsesstedet bistår uddannelsessøgende og deltagere med henvendelse til kommunen, herunder med fornøden dokumentation for indskrivning, studieaktivitet og eventuelle eksaminer og prøver. Uddannelsesstedet giver kommunen underretning om eventuelt langvarigt fravær eller studieafbrud.\n\n§ 16. Afgørelser, som uddannelsesstedet træffer efter § 4, stk. 2, § 9, stk. 3 og 4, og § 9 a, kan ikke indbringes for en anden administrativ myndighed."
-      },
-      "condition":"equals"
+      }
    }
 ]
