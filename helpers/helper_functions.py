@@ -93,6 +93,10 @@ def resolve_blocks(blocks: list[dict], block_metadata: dict, item_data: dict):
 
             continue
 
+        if block_id in block_metadata.get("custom_contains", {}):
+            block["mapping"] = block_metadata["custom_contains"][block_id]
+            block["condition"] = "custom_contains"
+
         # -------------------------
         # HAS VALUE
         # -------------------------

@@ -1,6 +1,6 @@
 [project]
 name = "rpa_afgoerelsesbreve"
-version = "0.0.1"
+version = "1.0.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -17,6 +17,11 @@ dependencies = [
   "ruff",
   "sqlalchemy >= 2.0.20",
   "sqlalchemy[asyncio] >= 2.0.20",
+  # 🔥 TEMPORARY - only needed by helpers/mock_skabelonmotor.py while the
+  # api-skabelonmotor service is not yet live. Remove these two together with
+  # that file once the API is deployed.
+  "beautifulsoup4",
+  "docx2pdf",
 ]
 
 [tool.uv.sources]

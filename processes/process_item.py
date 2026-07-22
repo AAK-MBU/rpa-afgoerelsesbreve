@@ -8,7 +8,11 @@ import re
 
 import requests
 
-from helpers import helper_functions, block_handlers
+from mbu_msoffice_integration.sharepoint_class import Sharepoint
+
+from helpers import config, helper_functions, block_handlers
+# 🔥 TEMPORARY - remove together with helpers/mock_skabelonmotor.py when the API is live
+from helpers import mock_skabelonmotor
 
 logger = logging.getLogger(__name__)
 
@@ -46,34 +50,61 @@ def process_item(item_data: dict, item_reference: str):
     # 1. We extract koerselsraekker and sort them by their start and end dates, so that we can initialize a koersel_startdato key, that is the start date of the earliest koerselstype
     # 2. We create a list of koerselstyper, that is used in the skabelonmotor to correctly identify which text snippets to use with regards to koerselstyper
     # 3. We do the same for koerselstype_tillaeg
-    koerselsraekker = item_data.get("koerselsraekker") or {}
-    sorted_koerselstyper = sorted(
-        koerselsraekker.items(),
-        key=lambda item: (
-            helper_functions.parse_date(item[1].get("bevilling_fra")),
-            helper_functions.parse_date(item[1].get("bevilling_til")),
-            item[0].lower(),
+    koerselsraekker = item_data.get("koerselsraekker") or []
+
+    sorted_koerselsraekker = sorted(
+        koerselsraekker,
+        key=lambda row: (
+            helper_functions.parse_date(row.get("bevilling_fra")),
+            helper_functions.parse_date(row.get("bevilling_til")),
+            str(row.get("koerselstype_key") or "").lower(),
+            row.get("koersel_id") or 0,
         )
     )
-    koerselstype = []
+
+    koerselstype_keys = []
+    koerselstype_labels = []
     koerselstype_tillaeg = []
-    if sorted_koerselstyper:
-        for i, (koerselstype_key, koerselstype_data) in enumerate(sorted_koerselstyper):
+
+    if sorted_koerselsraekker:
+        latest_koerselsraekke = max(
+            sorted_koerselsraekker,
+            key=lambda row: helper_functions.parse_date(row.get("bevilling_til"))
+        )
+
+        item_data["koersel_slutdato"] = latest_koerselsraekke.get("bevilling_til")
+
+        for i, koerselsraekke in enumerate(sorted_koerselsraekker):
             if i == 0:
-                # Here we set the koersel_startdato mentioned in point 1 above
-                item_data["koersel_startdato"] = koerselstype_data.get("bevilling_fra")
+                item_data["koersel_startdato"] = koerselsraekke.get("bevilling_fra")
 
-            koerselstype.append(koerselstype_key)
+            koerselstype_key = koerselsraekke.get("koerselstype_key")
+            koerselstype_label = koerselsraekke.get("koerselstype")
 
-            raw = koerselstype_data.get("koerselstype_tillaeg")
-            if raw:
+            if koerselstype_key:
+                koerselstype_keys.append(koerselstype_key)
+
+            if koerselstype_label:
+                koerselstype_labels.append(koerselstype_label)
+
+            raw_tillaeg = koerselsraekke.get("koerselstype_tillaeg")
+
+            if raw_tillaeg:
                 koerselstype_tillaeg.extend(
-                    item.strip() for item in raw.split(",")
+                    item.strip()
+                    for item in raw_tillaeg.split(",")
+                    if item.strip()
                 )
-    # Here we set the koerselstype key override - by setting it like this, we ensure the skabelonmotor doesn't use the incorrectly formatted key from the citizen's data, but instead this properly formatted key
-    custom_key_overrides["koerselstype"] = koerselstype
-    # Here we do the same for koerselstype_tillaeg
+
+
+    # Used by the block engine for selecting snippets
+    custom_key_overrides["koerselstype"] = koerselstype_keys
     custom_key_overrides["koerselstype_tillaeg"] = koerselstype_tillaeg
+
+    # Used by normal placeholder replacement: {koerselstype}
+    unique_koerselstype_labels = list(dict.fromkeys(koerselstype_labels))
+
+    item_data["koerselstype"] = ", ".join(unique_koerselstype_labels)
 
     # We create 2 custom variables, used as custom keys to correctly handle block 9.1 and 9.2 in the template text data
     if "midlertidig" in str(afgoerelsesbrev).lower():
@@ -98,20 +129,25 @@ def process_item(item_data: dict, item_reference: str):
             "3.2",
             "4",
         ],
-        "custom": {
-            "3.1": block_handlers.handle_custom_koerselstyper,
-        },
         "custom_key": {
+            "1.1": item_data.get("brev_i_forbindelse_med"),
+            "2.2": item_data.get("befordringsudvalg_resultat"),
             "5": afgoerelsesbrev_decision,
             "8": afgoerelsesbrev_decision,
             "9.1": klagevejledning,
             "9.2": regler,
         },
+        "custom": {
+            "3.1": block_handlers.handle_custom_koerselstyper,
+        },
         "copy": {
             "7.3": "3.1",
         },
+        "custom_contains": {
+            "7.4": afgoerelsesbrev_decision,
+        },
         "all": [
-            "7.4",
+            "7.5",
         ],
     }
 
@@ -147,8 +183,9 @@ def process_item(item_data: dict, item_reference: str):
 
     row = df.iloc[0]
 
-    request_data["DOKUMENTNUMMER"] = "1232543åperotdlfm"
+    request_data["DOKUMENTNUMMER"] = "12325"
     request_data["dags_dato"] = datetime.datetime.now().date().isoformat()
+    request_data["skolens_navn"] = request_data.get("skole")
 
     # Retrieve the docx template and replace any placeholders
     template_binary_docx = row["word_template"]
@@ -168,25 +205,48 @@ def process_item(item_data: dict, item_reference: str):
     # import sys
     # sys.exit()
 
-    print()
+    # Initialize the SharePoint connection once - it is reused for every file we upload
+    sharepoint = Sharepoint(**config.SHAREPOINT_KWARGS)
 
-    for file_type in ["docx", "pdf"]:
-        request = {
-            "data": request_data,
-            "block_data": resolved_blocks,
-            "custom_key_overrides": custom_key_overrides,
-            "file_type": file_type,
-            "template_b64": template_b64,
-        }
+    for file_type in ["pdf"]:
+        file_name = f"{barnets_fulde_navn}_{request_data["dags_dato"]}.{file_type}"
 
-        url = "http://localhost:8000/letter_creation/create_letter"
+        # ╔══════════════════════════════════════════════════════════════════╗
+        # ║ 🔥 TEMPORARY MOCK - api-skabelonmotor is not yet live 🔥          ║
+        # ║ While the API is not dockerised/online we build the letter        ║
+        # ║ in-process via helpers.mock_skabelonmotor. When the API is         ║
+        # ║ deployed, delete helpers/mock_skabelonmotor.py and restore the     ║
+        # ║ HTTP call below.                                                   ║
+        # ╚══════════════════════════════════════════════════════════════════╝
+        file_bytes = mock_skabelonmotor.create_letter(
+            data=request_data,
+            block_data=resolved_blocks,
+            custom_key_overrides=custom_key_overrides,
+            file_type=file_type,
+            file_name=file_name,
+            template_b64=template_b64,
+        )
 
-        response = requests.post(url, json=request, timeout=10)
-        response.raise_for_status()
+        # --- ORIGINAL API CALL (restore when api-skabelonmotor is live) ---
+        # request = {
+        #     "data": request_data,
+        #     "block_data": resolved_blocks,
+        #     "custom_key_overrides": custom_key_overrides,
+        #     "file_type": file_type,
+        #     "file_name": file_name,
+        #     "template_b64": template_b64,
+        # }
+        #
+        # url = "http://localhost:8020/letter_creation/create_letter"
+        #
+        # response = requests.post(url, json=request, timeout=60)
+        # response.raise_for_status()
+        #
+        # file_bytes = response.content
 
-        file_bytes = response.content
-
-        file_name = f"test_letter.{file_type}"
-
-        with open(file_name, "wb") as f:
-            f.write(file_bytes)
+        # Upload the created letter to SharePoint instead of saving it locally
+        sharepoint.upload_file_from_bytes(
+            binary_content=file_bytes,
+            file_name=file_name,
+            folder_name=config.FOLDER_NAME,
+        )

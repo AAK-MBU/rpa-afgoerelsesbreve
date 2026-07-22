@@ -14,7 +14,7 @@ RETRY_BASE_DELAY = 0.5  # seconds (exponential backoff)
 # SharePoint stuff
 SHAREPOINT_SITE_URL = "https://aarhuskommune.sharepoint.com"
 
-SHAREPOINT_SITE_NAME = "MBURPA"
+SHAREPOINT_SITE_NAME = "BudgetogRegnskab-Samarbejdsprojekter-Befordring"
 
 DOCUMENT_LIBRARY = "Delte dokumenter"
 
@@ -28,4 +28,4 @@ SHAREPOINT_KWARGS = {
     "document_library": DOCUMENT_LIBRARY,
 }
 
-FOLDER_NAME = "Egenbefordring/Afgørelsesbreve"
+FOLDER_NAME = "Afgørelsesbreve"
