@@ -135,11 +135,12 @@ if __name__ == "__main__":
     # item = items[0]
     # print(item)
     # item = item.update_status(status="new")
-    prod_workqueue.clear_workqueue()
     ### DELETE
 
     if "--process" in sys.argv:
         asyncio.run(process_workqueue(prod_workqueue))
+
+        prod_workqueue.clear_workqueue()
 
     if "--finalize" in sys.argv:
         asyncio.run(finalize(prod_workqueue))
