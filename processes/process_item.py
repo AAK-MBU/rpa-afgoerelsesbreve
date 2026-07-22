@@ -208,7 +208,7 @@ def process_item(item_data: dict, item_reference: str):
     # Initialize the SharePoint connection once - it is reused for every file we upload
     sharepoint = Sharepoint(**config.SHAREPOINT_KWARGS)
 
-    for file_type in ["pdf"]:
+    for file_type in ["docx"]:
         file_name = f"{barnets_fulde_navn}_{request_data["dags_dato"]}.{file_type}"
 
         # ╔══════════════════════════════════════════════════════════════════╗
