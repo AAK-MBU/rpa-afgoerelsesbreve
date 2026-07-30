@@ -8,8 +8,7 @@ def _format_koerselsraekke(data: dict) -> str:
     Format a single kørselsrække, e.g.:
         "Skånekørsel morgen [mandag, onsdag, fredag] fra 01-03-2026 til 01-07-2027"
 
-    - Tidspunkt follows the kørselstype (lowercased), omitted when it is the
-      default "Morgen og eftermiddag".
+    - Tidspunkt follows the kørselstype (lowercased) whenever it is filled.
     - Weekdays follow in brackets (lowercased), omitted when "Alle".
     """
 
@@ -25,7 +24,7 @@ def _format_koerselsraekke(data: dict) -> str:
     dage = data.get("dage")
 
     tidspunkt_text = ""
-    if tidspunkt and tidspunkt.lower() != "morgen og eftermiddag":
+    if tidspunkt:
         tidspunkt_text = f" {tidspunkt.lower()}"
 
     dage_text = ""
