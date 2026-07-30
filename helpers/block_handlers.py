@@ -89,7 +89,8 @@ def handle_custom_koerselstyper(item_data: dict, block: dict):
             extras.append(tidspunkt)
 
         if dage and dage.lower() != "alle":
-            extras.append(dage)
+            # Weekdays with a lowercase initial (mandag, onsdag, …).
+            extras.append(dage.lower())
 
         extra_text = f" [{', '.join(extras)}]" if extras else ""
 
@@ -127,7 +128,8 @@ def handle_custom_koerselstyper(item_data: dict, block: dict):
             extras.append(tidspunkt)
 
         if dage and dage.lower() != "alle":
-            extras.append(dage)
+            # Weekdays with a lowercase initial (mandag, onsdag, …).
+            extras.append(dage.lower())
 
         extra_text = f" [{', '.join(extras)}]" if extras else ""
 
