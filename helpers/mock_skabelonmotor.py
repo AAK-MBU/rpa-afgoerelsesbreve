@@ -102,7 +102,20 @@ def create_letter(
         # -----------------------------
         elif condition == "custom_contains":
             if mapping:
-                normalized_mapping = normalize_key(mapping)
+                # Match an entry when any single word from the mapping value
+                # appears inside the entry key. Here the mapping is the
+                # afgørelses-beslutning (e.g. "Bevilling" or "Midlertidig kørsel
+                # bevilling") and the entry key is "Alle bevillinger": both
+                # bevillings-varianter contain the word "bevilling", which is a
+                # substring of the entry key, so block 7.4 is included - while
+                # "Afslag" / "Midlertidig kørsel afslag" contain no such word and
+                # are skipped. (Whole-string containment either way fails for the
+                # multi-word "Midlertidig kørsel bevilling" decision.)
+                mapping_tokens = [
+                    normalize_key(token)
+                    for token in str(mapping).split()
+                    if normalize_key(token)
+                ]
 
                 matching_entry_keys = sorted(
                     normalized_entries.keys(),
@@ -111,7 +124,7 @@ def create_letter(
                 )
 
                 for normalized_entry_key in matching_entry_keys:
-                    if normalized_entry_key in normalized_mapping:
+                    if any(token in normalized_entry_key for token in mapping_tokens):
                         text = normalized_entries[normalized_entry_key]
 
                         if text:
