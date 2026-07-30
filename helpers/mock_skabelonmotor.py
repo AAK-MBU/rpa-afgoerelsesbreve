@@ -243,7 +243,17 @@ def insert_letter_into_template(template_b64: str, letter_text: str) -> bytes:
             content = str(node)
 
             if not content.strip():
-                if " " in content or "\xa0" in content:
+                # Preserve intentional line breaks even when the newline sits
+                # between inline tags (e.g. "...\n</em>\n<em>..."). Splitting the
+                # letter on "\n\n" only catches *consecutive* newlines; a blank
+                # line whose two newlines straddle a tag boundary arrives here as
+                # a standalone "\n" text node and would otherwise be discarded,
+                # collapsing the blank line to nothing.
+                if "\n" in content:
+                    run = paragraph.add_run()
+                    for _ in range(content.count("\n")):
+                        run.add_break()
+                elif " " in content or "\xa0" in content:
                     paragraph.add_run(" ")
 
                 return
@@ -388,7 +398,17 @@ def html_to_docx_bytes(text: str) -> bytes:
             content = str(node)
 
             if not content.strip():
-                if " " in content or "\xa0" in content:
+                # Preserve intentional line breaks even when the newline sits
+                # between inline tags (e.g. "...\n</em>\n<em>..."). Splitting the
+                # letter on "\n\n" only catches *consecutive* newlines; a blank
+                # line whose two newlines straddle a tag boundary arrives here as
+                # a standalone "\n" text node and would otherwise be discarded,
+                # collapsing the blank line to nothing.
+                if "\n" in content:
+                    run = paragraph.add_run()
+                    for _ in range(content.count("\n")):
+                        run.add_break()
+                elif " " in content or "\xa0" in content:
                     paragraph.add_run(" ")
 
                 return
