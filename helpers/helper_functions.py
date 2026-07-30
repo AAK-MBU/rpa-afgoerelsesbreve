@@ -287,6 +287,22 @@ def replace_template_placeholders(template_bytes: str, data: dict) -> bytes:
     return template_b64
 
 
+def format_cpr(value) -> str:
+    """
+    Format a CPR number as XXXXXX-XXXX for display in the letter.
+
+    Only reformats when there are exactly 10 digits; otherwise the value is
+    returned unchanged (stringified) so partial/odd values aren't mangled.
+    """
+
+    digits = "".join(ch for ch in str(value or "") if ch.isdigit())
+
+    if len(digits) == 10:
+        return f"{digits[:6]}-{digits[6:]}"
+
+    return str(value or "")
+
+
 def parse_date(value: str | None):
     """
     Convert a DD-MM-YYYY string into a datetime object.

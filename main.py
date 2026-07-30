@@ -140,7 +140,9 @@ if __name__ == "__main__":
     if "--process" in sys.argv:
         asyncio.run(process_workqueue(prod_workqueue))
 
+        ### REMOVE BEFORE PROD
         prod_workqueue.clear_workqueue()
+        ### REMOVE BEFORE PROD
 
     if "--finalize" in sys.argv:
         asyncio.run(finalize(prod_workqueue))

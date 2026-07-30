@@ -187,6 +187,9 @@ def process_item(item_data: dict, item_reference: str):
     request_data["dags_dato"] = datetime.datetime.now().date().isoformat()
     request_data["skolens_navn"] = request_data.get("skole")
 
+    # Format the child's CPR as XXXXXX-XXXX for the letter.
+    request_data["barnets_cpr"] = helper_functions.format_cpr(request_data.get("barnets_cpr"))
+
     # Retrieve the docx template and replace any placeholders
     template_binary_docx = row["word_template"]
     template_b64 = helper_functions.replace_template_placeholders(template_bytes=template_binary_docx, data=request_data)
