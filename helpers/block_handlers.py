@@ -3,6 +3,38 @@
 from helpers import helper_functions
 
 
+def _format_koerselsraekke(data: dict) -> str:
+    """
+    Format a single kørselsrække, e.g.:
+        "Skånekørsel morgen [mandag, onsdag, fredag] fra 01-03-2026 til 01-07-2027"
+
+    - Tidspunkt follows the kørselstype (lowercased), omitted when it is the
+      default "Morgen og eftermiddag".
+    - Weekdays follow in brackets (lowercased), omitted when "Alle".
+    """
+
+    koerselstype = (
+        data.get("koerselstype")
+        or data.get("koerselstype_key")
+        or "kørsel"
+    )
+
+    start = data.get("bevilling_fra")
+    slut = data.get("bevilling_til")
+    tidspunkt = data.get("tidspunkt")
+    dage = data.get("dage")
+
+    tidspunkt_text = ""
+    if tidspunkt and tidspunkt.lower() != "morgen og eftermiddag":
+        tidspunkt_text = f" {tidspunkt.lower()}"
+
+    dage_text = ""
+    if dage and dage.lower() != "alle":
+        dage_text = f" [{dage.lower()}]"
+
+    return f"{koerselstype}{tidspunkt_text}{dage_text} fra {start} til {slut}"
+
+
 def handle_custom_koerselstyper(item_data: dict, block: dict):
     """
     Generate dynamic text for the "Kørselstype" block based on the transport rows
@@ -70,34 +102,7 @@ def handle_custom_koerselstyper(item_data: dict, block: dict):
     # ----------------------------------------
 
     if antal == 1:
-        data = sorted_koerselsraekker[0]
-
-        koerselstype = (
-            data.get("koerselstype")
-            or data.get("koerselstype_key")
-            or "kørsel"
-        )
-
-        start = data.get("bevilling_fra")
-        slut = data.get("bevilling_til")
-        tidspunkt = data.get("tidspunkt")
-        dage = data.get("dage")
-
-        extras = []
-
-        if tidspunkt and tidspunkt.lower() != "morgen og eftermiddag":
-            extras.append(tidspunkt)
-
-        if dage and dage.lower() != "alle":
-            # Weekdays with a lowercase initial (mandag, onsdag, …).
-            extras.append(dage.lower())
-
-        extra_text = f" [{', '.join(extras)}]" if extras else ""
-
-        text = (
-            f"Kørslen bevilges i form af {koerselstype}"
-            f"{extra_text} fra {start} til {slut}."
-        )
+        text = f"Kørslen bevilges i form af {_format_koerselsraekke(sorted_koerselsraekker[0])}."
 
         block["mapping"] = "Én kørselstype"
         block["entries"] = {"Én kørselstype": text}
@@ -111,31 +116,7 @@ def handle_custom_koerselstyper(item_data: dict, block: dict):
     lines = ["Kørslen bevilges i følgende form:"]
 
     for data in sorted_koerselsraekker:
-        koerselstype = (
-            data.get("koerselstype")
-            or data.get("koerselstype_key")
-            or "kørsel"
-        )
-
-        start = data.get("bevilling_fra")
-        slut = data.get("bevilling_til")
-        tidspunkt = data.get("tidspunkt")
-        dage = data.get("dage")
-
-        extras = []
-
-        if tidspunkt and tidspunkt.lower() != "morgen og eftermiddag":
-            extras.append(tidspunkt)
-
-        if dage and dage.lower() != "alle":
-            # Weekdays with a lowercase initial (mandag, onsdag, …).
-            extras.append(dage.lower())
-
-        extra_text = f" [{', '.join(extras)}]" if extras else ""
-
-        lines.append(
-            f"• {koerselstype}{extra_text} fra {start} til {slut}."
-        )
+        lines.append(f"• {_format_koerselsraekke(data)}.")
 
     text = "\n".join(lines)
 
