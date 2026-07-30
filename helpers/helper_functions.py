@@ -50,21 +50,64 @@ def resolve_blocks(blocks: list[dict], block_metadata: dict, item_data: dict):
 
         # -------------------------
         # COPY
-        # If the block_id is specified in the copy section, we copy the mapping, entries, and condition from the specified copy block
-        # This should always be from a block that is handled earlier than the block specified in the copy section of the block_metadata
+        # Copy the rendered content of one or more earlier blocks into this one.
+        # The copy value may be a single block_id (string) or several (list).
+        # Source blocks must be handled earlier in the loop so they are already
+        # resolved when we copy them.
+        #
+        # We merge the entries each source would *actually render* (mirroring the
+        # skabelonmotor's per-condition selection) and emit them all via the
+        # "all" condition, preserving order.
         # -------------------------
         if block_id in block_metadata.get("copy", {}):
-            source_id = block_metadata["copy"][block_id]
+            source_ids = block_metadata["copy"][block_id]
 
-            source_block = next(
-                (b for b in blocks if b["block_id"] == source_id),
-                None
-            )
+            if isinstance(source_ids, str):
+                source_ids = [source_ids]
 
-            if source_block:
-                block["mapping"] = source_block.get("mapping")
-                block["entries"] = copy.deepcopy(source_block.get("entries", {}))
-                block["condition"] = source_block.get("condition", "equals")
+            merged_entries = {}
+
+            for source_id in source_ids:
+                source_block = next(
+                    (b for b in blocks if b["block_id"] == source_id),
+                    None
+                )
+
+                if not source_block:
+                    continue
+
+                source_condition = source_block.get("condition", "equals")
+                source_entries = source_block.get("entries", {})
+                source_mapping = source_block.get("mapping")
+
+                if source_condition == "custom":
+                    # Custom renders the single entry whose key matches the mapping.
+                    normalized_entries = {
+                        normalize_key(k): (k, v)
+                        for k, v in source_entries.items()
+                    }
+                    hit = normalized_entries.get(normalize_key(source_mapping or ""))
+
+                    if hit:
+                        merged_entries[f"{source_id}:{hit[0]}"] = copy.deepcopy(hit[1])
+
+                elif source_condition == "has_value":
+                    # has_value renders the first entry only when the mapped field
+                    # has a value in the item data.
+                    if source_mapping and item_data.get(normalize_key(source_mapping)):
+                        first = next(iter(source_entries.items()), None)
+
+                        if first:
+                            merged_entries[f"{source_id}:{first[0]}"] = copy.deepcopy(first[1])
+
+                else:
+                    # "all" (and any other) — include every entry as-is.
+                    for entry_key, entry_text in source_entries.items():
+                        merged_entries[f"{source_id}:{entry_key}"] = copy.deepcopy(entry_text)
+
+            block["mapping"] = None
+            block["entries"] = merged_entries
+            block["condition"] = "all"
 
             continue
 

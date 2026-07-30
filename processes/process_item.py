@@ -25,6 +25,8 @@ def process_item(item_data: dict, item_reference: str):
     assert item_data, "Item data is required"
     assert item_reference, "Item reference is required"
 
+    item_data["barnets_cpr"] = helper_functions.format_cpr(item_data.get("barnets_cpr"))
+
     # Initialize an empty dict to contain key overrides
     custom_key_overrides = {}
 
@@ -141,7 +143,7 @@ def process_item(item_data: dict, item_reference: str):
             "3.1": block_handlers.handle_custom_koerselstyper,
         },
         "copy": {
-            "7.3": "3.1",
+            "7.3": ["3.1", "3.2"],
         },
         "custom_contains": {
             "7.4": afgoerelsesbrev_decision,
@@ -184,7 +186,7 @@ def process_item(item_data: dict, item_reference: str):
     row = df.iloc[0]
 
     request_data["DOKUMENTNUMMER"] = "12325"
-    request_data["dags_dato"] = datetime.datetime.now().date().isoformat()
+    request_data["dags_dato"] = datetime.datetime.now().strftime("%d-%m-%Y")
     request_data["skolens_navn"] = request_data.get("skole")
 
     # Format the child's CPR as XXXXXX-XXXX for the letter.
