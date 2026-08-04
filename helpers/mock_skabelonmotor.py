@@ -41,19 +41,120 @@ from docx2pdf import convert
 LIST_ITEM_MARKER = "[[LIST_ITEM]]"
 
 
-def _add_bullet_paragraph(doc):
-    """Add a paragraph using Word's built-in "List Bullet" style.
+def _ensure_bullet_numbering(doc):
+    """Ensure the document has a bullet numbering definition; return its numId.
 
-    Falls back to a plain paragraph with a literal bullet if the template does
-    not define the style, so letter generation never crashes.
+    Adds a single-level bullet definition to the document's numbering part the
+    first time it's called, then caches the numId on the document so every
+    bullet item shares one list definition.
     """
 
+    cached = getattr(doc, "_bullet_num_id", None)
+    if cached is not None:
+        return cached
+
+    numbering = doc.part.numbering_part.element
+
+    abstract_id = max(
+        (int(a.get(qn("w:abstractNumId"))) for a in numbering.findall(qn("w:abstractNum"))),
+        default=-1,
+    ) + 1
+    num_id = max(
+        (int(n.get(qn("w:numId"))) for n in numbering.findall(qn("w:num"))),
+        default=0,
+    ) + 1
+
+    # <w:abstractNum> with a single bullet level.
+    abstract = OxmlElement("w:abstractNum")
+    abstract.set(qn("w:abstractNumId"), str(abstract_id))
+
+    lvl = OxmlElement("w:lvl")
+    lvl.set(qn("w:ilvl"), "0")
+
+    start = OxmlElement("w:start")
+    start.set(qn("w:val"), "1")
+
+    num_fmt = OxmlElement("w:numFmt")
+    num_fmt.set(qn("w:val"), "bullet")
+
+    lvl_text = OxmlElement("w:lvlText")
+    lvl_text.set(qn("w:val"), "")  # Symbol-font bullet glyph
+
+    lvl_jc = OxmlElement("w:lvlJc")
+    lvl_jc.set(qn("w:val"), "left")
+
+    lvl_ppr = OxmlElement("w:pPr")
+    ind = OxmlElement("w:ind")
+    ind.set(qn("w:left"), "720")
+    ind.set(qn("w:hanging"), "360")
+    lvl_ppr.append(ind)
+
+    lvl_rpr = OxmlElement("w:rPr")
+    r_fonts = OxmlElement("w:rFonts")
+    r_fonts.set(qn("w:ascii"), "Symbol")
+    r_fonts.set(qn("w:hAnsi"), "Symbol")
+    r_fonts.set(qn("w:hint"), "default")
+    lvl_rpr.append(r_fonts)
+
+    for child in (start, num_fmt, lvl_text, lvl_jc, lvl_ppr, lvl_rpr):
+        lvl.append(child)
+
+    abstract.append(lvl)
+
+    # <w:num> that references the abstract definition.
+    num = OxmlElement("w:num")
+    num.set(qn("w:numId"), str(num_id))
+    abstract_ref = OxmlElement("w:abstractNumId")
+    abstract_ref.set(qn("w:val"), str(abstract_id))
+    num.append(abstract_ref)
+
+    # Keep schema order: all <w:abstractNum> before any <w:num>.
+    first_num = numbering.find(qn("w:num"))
+    if first_num is not None:
+        first_num.addprevious(abstract)
+    else:
+        numbering.append(abstract)
+    numbering.append(num)
+
+    doc._bullet_num_id = num_id
+    return num_id
+
+
+def _add_bullet_paragraph(doc):
+    """Add a genuine Word bullet-list paragraph.
+
+    Attaches list numbering directly to the paragraph (a real <w:numPr>) so
+    Word treats it as an actual bullet list — the glyph renders and the ribbon
+    bullet button toggles on — independent of the template's styles. Degrades
+    gracefully (built-in style, then a literal bullet) if the numbering part
+    can't be used, so letter generation never crashes.
+    """
+
+    paragraph = doc.add_paragraph()
+
     try:
-        return doc.add_paragraph(style="List Bullet")
-    except KeyError:
-        paragraph = doc.add_paragraph()
-        paragraph.add_run("• ")
-        return paragraph
+        num_id = _ensure_bullet_numbering(doc)
+
+        p_pr = paragraph._p.get_or_add_pPr()
+
+        num_pr = OxmlElement("w:numPr")
+
+        ilvl = OxmlElement("w:ilvl")
+        ilvl.set(qn("w:val"), "0")
+
+        num_id_el = OxmlElement("w:numId")
+        num_id_el.set(qn("w:val"), str(num_id))
+
+        num_pr.append(ilvl)
+        num_pr.append(num_id_el)
+        p_pr.append(num_pr)
+    except Exception:
+        try:
+            paragraph.style = "List Bullet"
+        except Exception:
+            paragraph.add_run("• ")
+
+    return paragraph
 
 
 def create_letter(
