@@ -11,6 +11,10 @@
 ║ restore the HTTP call in processes/process_item.py (see the marker    ║
 ║ comment there).                                                        ║
 ╚══════════════════════════════════════════════════════════════════════╝
+
+⚠️  KEEP IN SYNC with api-skabelonmotor/app/utils/helper_functions.py — any
+    change to the rendering logic here (bullet lists / placeholder handling /
+    HTML → DOCX) must be mirrored there, and vice-versa, until the migration.
 """
 
 import base64
@@ -29,6 +33,27 @@ from docx.opc.constants import RELATIONSHIP_TYPE as RT
 from docx.shared import RGBColor, Pt
 
 from docx2pdf import convert
+
+
+# Paragraphs starting with this marker are rendered as Word bullet-list items
+# (punktopstilling) rather than plain paragraphs. Emitted by block handlers
+# (e.g. the multi-kørselsrække block in helpers/block_handlers.py).
+LIST_ITEM_MARKER = "[[LIST_ITEM]]"
+
+
+def _add_bullet_paragraph(doc):
+    """Add a paragraph using Word's built-in "List Bullet" style.
+
+    Falls back to a plain paragraph with a literal bullet if the template does
+    not define the style, so letter generation never crashes.
+    """
+
+    try:
+        return doc.add_paragraph(style="List Bullet")
+    except KeyError:
+        paragraph = doc.add_paragraph()
+        paragraph.add_run("• ")
+        return paragraph
 
 
 def create_letter(
@@ -349,7 +374,13 @@ def insert_letter_into_template(template_b64: str, letter_text: str) -> bytes:
 
             for offset, p in enumerate(paragraphs):
 
-                new_paragraph = doc.add_paragraph()
+                is_bullet = p.lstrip().startswith(LIST_ITEM_MARKER)
+
+                if is_bullet:
+                    p = p.replace(LIST_ITEM_MARKER, "", 1).lstrip()
+                    new_paragraph = _add_bullet_paragraph(doc)
+                else:
+                    new_paragraph = doc.add_paragraph()
 
                 soup = BeautifulSoup(p, "html.parser")
 
@@ -495,7 +526,13 @@ def html_to_docx_bytes(text: str) -> bytes:
 
     for p in paragraphs:
 
-        paragraph = doc.add_paragraph()
+        is_bullet = p.lstrip().startswith(LIST_ITEM_MARKER)
+
+        if is_bullet:
+            p = p.replace(LIST_ITEM_MARKER, "", 1).lstrip()
+            paragraph = _add_bullet_paragraph(doc)
+        else:
+            paragraph = doc.add_paragraph()
 
         # Parse paragraph HTML so formatting can be processed node-by-node
         soup = BeautifulSoup(p, "html.parser")

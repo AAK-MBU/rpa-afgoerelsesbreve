@@ -112,12 +112,17 @@ def handle_custom_koerselstyper(item_data: dict, block: dict):
     # Multiple transport rows
     # ----------------------------------------
 
-    lines = ["Kørslen bevilges i følgende form:"]
+    # Intro line, then one paragraph per kørselsrække. Each list item is
+    # prefixed with the "[[LIST_ITEM]]" marker (and paragraphs are separated by
+    # blank lines), which the skabelonmotor renderer turns into a real Word
+    # bullet (the "List Bullet" style / punktopstilling). A literal "•" only
+    # renders as a plain dot, not a Word list.
+    parts = ["Kørslen bevilges i følgende form:"]
 
     for data in sorted_koerselsraekker:
-        lines.append(f"• {_format_koerselsraekke(data)}.")
+        parts.append(f"[[LIST_ITEM]]{_format_koerselsraekke(data)}.")
 
-    text = "\n".join(lines)
+    text = "\n\n".join(parts)
 
     block["mapping"] = "Flere kørselstyper"
     block["entries"] = {"Flere kørselstyper": text}
