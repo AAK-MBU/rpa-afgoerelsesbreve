@@ -27,9 +27,11 @@ from io import BytesIO
 from bs4 import BeautifulSoup
 
 from docx import Document
-from docx.oxml import OxmlElement
+from docx.oxml import OxmlElement, parse_xml
 from docx.oxml.ns import qn
-from docx.opc.constants import RELATIONSHIP_TYPE as RT
+from docx.opc.constants import RELATIONSHIP_TYPE as RT, CONTENT_TYPE as CT
+from docx.opc.packuri import PackURI
+from docx.parts.numbering import NumberingPart
 from docx.shared import RGBColor, Pt
 
 from docx2pdf import convert
@@ -39,6 +41,31 @@ from docx2pdf import convert
 # (punktopstilling) rather than plain paragraphs. Emitted by block handlers
 # (e.g. the multi-kørselsrække block in helpers/block_handlers.py).
 LIST_ITEM_MARKER = "[[LIST_ITEM]]"
+
+
+def _numbering_element(doc):
+    """Return the document's <w:numbering> root element.
+
+    Creates the numbering part (and its relationship) first if the template
+    doesn't already have one — otherwise python-docx raises NotImplementedError
+    for templates that have never contained a list, and bullets fall back to a
+    literal "•".
+    """
+
+    part = doc.part
+
+    try:
+        return part.numbering_part.element
+    except NotImplementedError:
+        pass
+
+    partname = PackURI("/word/numbering.xml")
+    element = parse_xml(
+        '<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'
+    )
+    numbering_part = NumberingPart(partname, CT.WML_NUMBERING, element, part.package)
+    part.relate_to(numbering_part, RT.NUMBERING)
+    return element
 
 
 def _ensure_bullet_numbering(doc):
@@ -53,7 +80,7 @@ def _ensure_bullet_numbering(doc):
     if cached is not None:
         return cached
 
-    numbering = doc.part.numbering_part.element
+    numbering = _numbering_element(doc)
 
     abstract_id = max(
         (int(a.get(qn("w:abstractNumId"))) for a in numbering.findall(qn("w:abstractNum"))),
