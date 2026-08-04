@@ -108,6 +108,29 @@ def process_item(item_data: dict, item_reference: str):
 
     item_data["koerselstype"] = ", ".join(unique_koerselstype_labels)
 
+    # Skolerejsekort details (transporttid i bus / antal skift) now live on the
+    # koersel instead of being typed in at letter time. Take the first non-empty
+    # value found across the koerselsraekker and expose each as a top-level
+    # variable, so the template can use the {transporttid_i_bus} / {skift_med_bus}
+    # placeholders.
+    item_data["transporttid_i_bus"] = next(
+        (
+            str(koerselsraekke.get("transporttid_i_bus"))
+            for koerselsraekke in sorted_koerselsraekker
+            if koerselsraekke.get("transporttid_i_bus") not in (None, "")
+        ),
+        "",
+    )
+
+    item_data["skift_med_bus"] = next(
+        (
+            str(koerselsraekke.get("skift_med_bus"))
+            for koerselsraekke in sorted_koerselsraekker
+            if koerselsraekke.get("skift_med_bus") not in (None, "")
+        ),
+        "",
+    )
+
     # We create 2 custom variables, used as custom keys to correctly handle block 9.1 and 9.2 in the template text data
     if "midlertidig" in str(afgoerelsesbrev).lower():
         klagevejledning = "Klagevejledning brækket ben ungdomsuddannelse"
