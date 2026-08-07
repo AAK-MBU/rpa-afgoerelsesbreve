@@ -409,6 +409,29 @@ def format_danish_date(value):
     return value
 
 
+def format_danish_number(value):
+    """Format a number with a Danish comma decimal separator and no trailing
+    zeros, e.g. 6.1 -> "6,1", 6.0 -> "6", 12.25 -> "12,25".
+
+    Returns "" for empty/None and leaves values that are not numeric unchanged.
+    """
+
+    if value in (None, ""):
+        return ""
+
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return value
+
+    # Round to at most 2 decimals (distances), drop trailing zeros, then use a
+    # comma as the decimal separator. rstrip only trims the fractional part
+    # because it stops at the "." (e.g. "100.00" -> "100." -> "100").
+    text = f"{number:.2f}".rstrip("0").rstrip(".")
+
+    return text.replace(".", ",")
+
+
 def extract_cell_formatting(cell):
     """
     Convert Excel rich text content into HTML-like formatted text.

@@ -139,6 +139,40 @@ def process_item(item_data: dict, item_reference: str):
     else:
         item_data["skift_med_bus"] = str(raw_skift)
 
+    # Egen befordring: the granted one-way driving distance ("Km i bil") lives
+    # on the koersel as bevilget_koereafstand_pr_vej. From it we expose two
+    # top-level placeholders for the egen-befordring block:
+    #   {bevilget_koereafstand_pr_vej} — one-way distance ("Km i bil")
+    #   {bevilget_koereafstand_pr_dag} — max per day ("Km pr dag (bil)")
+    # Per day = one-way distance × the number of one-way trips the child is in
+    # the car: 2 for "Morgen og eftermiddag", otherwise 1. Danish letters use a
+    # comma as the decimal separator (6,1 — not 6.1).
+    egen_befordring_koersel = next(
+        (
+            koerselsraekke
+            for koerselsraekke in sorted_koerselsraekker
+            if koerselsraekke.get("bevilget_koereafstand_pr_vej") not in (None, "")
+        ),
+        None,
+    )
+
+    if egen_befordring_koersel:
+        km_pr_vej = egen_befordring_koersel.get("bevilget_koereafstand_pr_vej")
+        tidspunkt = str(egen_befordring_koersel.get("tidspunkt") or "").lower()
+        trips_per_day = 2 if ("morgen" in tidspunkt and "eftermiddag" in tidspunkt) else 1
+
+        item_data["bevilget_koereafstand_pr_vej"] = helper_functions.format_danish_number(km_pr_vej)
+
+        try:
+            item_data["bevilget_koereafstand_pr_dag"] = helper_functions.format_danish_number(
+                float(km_pr_vej) * trips_per_day
+            )
+        except (TypeError, ValueError):
+            item_data["bevilget_koereafstand_pr_dag"] = ""
+    else:
+        item_data["bevilget_koereafstand_pr_vej"] = ""
+        item_data["bevilget_koereafstand_pr_dag"] = ""
+
     # We create 2 custom variables, used as custom keys to correctly handle block 9.1 and 9.2 in the template text data
     if "midlertidig" in str(afgoerelsesbrev).lower():
         klagevejledning = "Klagevejledning brækket ben ungdomsuddannelse"
