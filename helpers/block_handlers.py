@@ -18,8 +18,8 @@ def _format_koerselsraekke(data: dict) -> str:
         or "kørsel"
     )
 
-    start = data.get("bevilling_fra")
-    slut = data.get("bevilling_til")
+    start = helper_functions.format_danish_date(data.get("bevilling_fra"))
+    slut = helper_functions.format_danish_date(data.get("bevilling_til"))
     tidspunkt = data.get("tidspunkt")
     dage = data.get("dage")
 

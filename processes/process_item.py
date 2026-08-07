@@ -249,12 +249,11 @@ def process_item(item_data: dict, item_reference: str):
         if request_data.get(field):
             request_data[field] = helper_functions.format_danish_date(request_data[field])
 
-    # The kørselsrække start/end dates are rendered inside the kørselstype block
-    # ("fra ... til ..."), so format them too.
-    for koerselsraekke in item_data.get("koerselsraekker") or []:
-        for field in ("bevilling_fra", "bevilling_til"):
-            if koerselsraekke.get(field):
-                koerselsraekke[field] = helper_functions.format_danish_date(koerselsraekke[field])
+    # NB: the kørselsrække start/end dates (bevilling_fra/bevilling_til) are
+    # intentionally NOT reformatted here — they are still sorted with
+    # parse_date (which expects dd-mm-yyyy) inside the kørselstype block
+    # handler. They are formatted for display in block_handlers
+    # (_format_koerselsraekke) instead.
 
     # Retrieve the docx template and replace any placeholders
     template_binary_docx = row["word_template"]
