@@ -224,9 +224,9 @@ def process_item(item_data: dict, item_reference: str):
     request_data["barnets_cpr"] = helper_functions.format_cpr(request_data.get("barnets_cpr"))
 
     # All dates in the letter body should read "30. juli 2026" (Danish long
-    # form). The header date in the main template is handled separately in the
-    # template itself. Dates reach us in mixed formats (dd-mm-yyyy from the
-    # views/dags_dato, ISO yyyy-mm-dd from the create-letter date pickers), so
+    # form). NB: dags_dato (the letterhead date) is intentionally NOT in this
+    # list — it stays dd-mm-yyyy. Dates reach us in mixed formats (dd-mm-yyyy
+    # from the views, ISO yyyy-mm-dd from the create-letter date pickers), so
     # format_danish_date parses both and leaves anything unparseable untouched.
     # This runs before the template placeholder replace AND before
     # resolve_blocks, so both the main template and the block texts get the
@@ -237,7 +237,6 @@ def process_item(item_data: dict, item_reference: str):
         "revurdering",
         "befordringsudvalg",
         "afstandskriterie_dato",
-        "dags_dato",
         "koersel_startdato",
         "koersel_slutdato",
         "dato_for_seneste_bevilling",

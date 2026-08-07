@@ -387,10 +387,10 @@ def format_danish_date(value):
     """Format a date value as e.g. "30. juli 2026" (Danish long form).
 
     Accepts the mixed formats that reach the letter data: DD-MM-YYYY (from the
-    SQL views and dags_dato), ISO YYYY-MM-DD (from the create-letter date
-    pickers) and DD/MM/YYYY. Values that are empty or cannot be parsed as a
-    date are returned unchanged, so literals like "D.D." pass through and an
-    already-formatted value is left as-is (idempotent).
+    SQL views), ISO YYYY-MM-DD (from the create-letter date pickers) and
+    DD/MM/YYYY. Values that are empty or cannot be parsed as a date are returned
+    unchanged, so literals like "D.D." pass through and an already-formatted
+    value is left as-is (idempotent).
     """
 
     if value in (None, ""):
