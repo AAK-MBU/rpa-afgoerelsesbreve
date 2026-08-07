@@ -49,9 +49,11 @@ def process_item(item_data: dict, item_reference: str):
     )
 
     # The snippet below is responsible for a couple things:
-    # 1. We extract koerselsraekker and sort them by their start and end dates, so that we can initialize a koersel_startdato key, that is the start date of the earliest koerselstype
+    # 1. We extract koerselsraekker and sort them by their start and end dates, so that we can initialize a koersel_slutdato key, that is the end date of the latest koerselstype
     # 2. We create a list of koerselstyper, that is used in the skabelonmotor to correctly identify which text snippets to use with regards to koerselstyper
     # 3. We do the same for koerselstype_tillaeg
+    # Note: koersel_startdato is a manual field supplied from the create-letter
+    # modal and is intentionally NOT computed here.
     koerselsraekker = item_data.get("koerselsraekker") or []
 
     sorted_koerselsraekker = sorted(
@@ -76,10 +78,7 @@ def process_item(item_data: dict, item_reference: str):
 
         item_data["koersel_slutdato"] = latest_koerselsraekke.get("bevilling_til")
 
-        for i, koerselsraekke in enumerate(sorted_koerselsraekker):
-            if i == 0:
-                item_data["koersel_startdato"] = koerselsraekke.get("bevilling_fra")
-
+        for koerselsraekke in sorted_koerselsraekker:
             koerselstype_key = koerselsraekke.get("koerselstype_key")
             koerselstype_label = koerselsraekke.get("koerselstype")
 
@@ -152,7 +151,6 @@ def process_item(item_data: dict, item_reference: str):
         "has_value": [
             "1.2",
             "3.2",
-            "4",
         ],
         "custom_key": {
             "1.1": item_data.get("brev_i_forbindelse_med"),
@@ -164,6 +162,7 @@ def process_item(item_data: dict, item_reference: str):
         },
         "custom": {
             "3.1": block_handlers.handle_custom_koerselstyper,
+            "4": block_handlers.handle_custom_sfo,
         },
         "copy": {
             "7.3": ["3.1", "3.2"],

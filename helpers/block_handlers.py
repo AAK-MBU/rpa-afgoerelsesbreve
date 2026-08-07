@@ -130,6 +130,74 @@ def handle_custom_koerselstyper(item_data: dict, block: dict):
     return block
 
 
+# The klub whose text differs from the generic SFO text. Compared
+# case-insensitively against the item_data["sfo"] value.
+
+
+def _find_entry_key(entries: dict, token: str):
+    """Return the first entry key that contains `token` (case-insensitive)."""
+
+    for key in entries:
+        if token in key.strip().lower():
+            return key
+
+    return None
+
+
+def handle_custom_sfo(item_data: dict, block: dict):
+    """Handle Blok 4 (SFO / klub).
+
+    item_data["sfo"] holds the SFO/klub institution the student is attached to
+    (e.g. "SFO - Holme Skole" or "Klubben Holme Søndergaard"), or is empty when
+    the student has no SFO/klub. A plain has_value check is no longer enough,
+    because the block now has two different texts (SFO vs. Klubben Holme
+    Søndergaard). Rules:
+
+    - Afslag -> nothing. We never grant SFO/klub transport in a rejection.
+    - No sfo value -> nothing.
+    - sfo names "Klubben Holme Søndergaard" -> the klub entry.
+    - sfo has any other value -> the generic SFO entry.
+
+    Selection sets block["mapping"] to the matching entry key so the "custom"
+    renderer appends that entry's text (or nothing when mapping is None).
+    """
+
+    afgoerelsesbrev = item_data.get("afgoerelsesbrev")
+    afgoerelsesbrev_decision = (
+        afgoerelsesbrev.split(":", 1)[0].strip()
+        if afgoerelsesbrev
+        else None
+    )
+
+    entries = block.get("entries", {})
+
+    # Lower-case both sides for a lenient comparison, per the field's free-text
+    # institution names.
+    sfo_value = (item_data.get("sfo") or "").strip()
+    normalized_sfo = sfo_value.lower()
+
+    # Suppress on rejection or when the student has no SFO/klub. "Nej" is
+    # treated as "no value" to match the template's negative case.
+    if (
+        afgoerelsesbrev_decision == "Afslag"
+        or not sfo_value
+        or normalized_sfo == "nej"
+    ):
+        block["mapping"] = None
+
+        return block
+
+    klubben_holme = "klubben holme søndergaard"
+
+    if klubben_holme in normalized_sfo:
+        block["mapping"] = _find_entry_key(entries, "klubben")
+
+    else:
+        block["mapping"] = _find_entry_key(entries, "sfo")
+
+    return block
+
+
 def handle_custom_blok_7_3(item_data: dict, block: dict):
     """Handle Blok 7.3.
 
