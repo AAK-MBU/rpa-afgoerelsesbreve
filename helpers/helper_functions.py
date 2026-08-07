@@ -27,6 +27,24 @@ logger = logging.getLogger(__name__)
 # "Blok 1", "Blok 3.1", "Blok 7.2a"
 BLOCK_HEADER_PATTERN = re.compile(r"^Blok\s+([0-9]+(?:\.\s*[0-9]+)?[a-zA-Z]?)")
 
+# Danish month names for the long date format used throughout the letters,
+# e.g. "30. juli 2026". Kept as an explicit map to avoid depending on a Danish
+# locale being installed on the machine running the RPA.
+DANISH_MONTHS = {
+    1: "januar",
+    2: "februar",
+    3: "marts",
+    4: "april",
+    5: "maj",
+    6: "juni",
+    7: "juli",
+    8: "august",
+    9: "september",
+    10: "oktober",
+    11: "november",
+    12: "december",
+}
+
 
 def resolve_blocks(blocks: list[dict], block_metadata: dict, item_data: dict):
     """
@@ -363,6 +381,32 @@ def parse_date(value: str | None):
         return datetime.max
 
     return datetime.strptime(value, "%d-%m-%Y")
+
+
+def format_danish_date(value):
+    """Format a date value as e.g. "30. juli 2026" (Danish long form).
+
+    Accepts the mixed formats that reach the letter data: DD-MM-YYYY (from the
+    SQL views and dags_dato), ISO YYYY-MM-DD (from the create-letter date
+    pickers) and DD/MM/YYYY. Values that are empty or cannot be parsed as a
+    date are returned unchanged, so literals like "D.D." pass through and an
+    already-formatted value is left as-is (idempotent).
+    """
+
+    if value in (None, ""):
+        return value
+
+    text = str(value).strip()
+
+    for fmt in ("%d-%m-%Y", "%Y-%m-%d", "%d/%m/%Y"):
+        try:
+            parsed = datetime.strptime(text, fmt)
+        except ValueError:
+            continue
+
+        return f"{parsed.day}. {DANISH_MONTHS[parsed.month]} {parsed.year}"
+
+    return value
 
 
 def extract_cell_formatting(cell):

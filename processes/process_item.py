@@ -223,6 +223,39 @@ def process_item(item_data: dict, item_reference: str):
     # Format the child's CPR as XXXXXX-XXXX for the letter.
     request_data["barnets_cpr"] = helper_functions.format_cpr(request_data.get("barnets_cpr"))
 
+    # All dates in the letter body should read "30. juli 2026" (Danish long
+    # form). The header date in the main template is handled separately in the
+    # template itself. Dates reach us in mixed formats (dd-mm-yyyy from the
+    # views/dags_dato, ISO yyyy-mm-dd from the create-letter date pickers), so
+    # format_danish_date parses both and leaves anything unparseable untouched.
+    # This runs before the template placeholder replace AND before
+    # resolve_blocks, so both the main template and the block texts get the
+    # formatted dates.
+    date_fields = (
+        "modtagelsesdato",
+        "sagsbehandlingsdato",
+        "revurdering",
+        "befordringsudvalg",
+        "afstandskriterie_dato",
+        "dags_dato",
+        "koersel_startdato",
+        "koersel_slutdato",
+        "dato_for_seneste_bevilling",
+        "dato_for_tidligere_afgoerelse",
+        "ophoersdato",
+    )
+
+    for field in date_fields:
+        if request_data.get(field):
+            request_data[field] = helper_functions.format_danish_date(request_data[field])
+
+    # The kørselsrække start/end dates are rendered inside the kørselstype block
+    # ("fra ... til ..."), so format them too.
+    for koerselsraekke in item_data.get("koerselsraekker") or []:
+        for field in ("bevilling_fra", "bevilling_til"):
+            if koerselsraekke.get(field):
+                koerselsraekke[field] = helper_functions.format_danish_date(koerselsraekke[field])
+
     # Retrieve the docx template and replace any placeholders
     template_binary_docx = row["word_template"]
     template_b64 = helper_functions.replace_template_placeholders(template_bytes=template_binary_docx, data=request_data)
