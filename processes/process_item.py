@@ -276,8 +276,21 @@ def process_item(item_data: dict, item_reference: str):
     # Initialize the SharePoint connection once - it is reused for every file we upload
     sharepoint = Sharepoint(**config.SHAREPOINT_KWARGS)
 
+    # Letter title follows the decision type (no date in the name):
+    #   Midlertidig kørsel -> "Afgørelse om midlertidig kørsel til NAVN"
+    #   Påtænkt afgørelse  -> "Påtænkt afgørelse om kørsel til NAVN"
+    #   Everything else    -> "Afgørelse om kørsel til NAVN"
+    decision_lower = (afgoerelsesbrev_decision or "").lower()
+
+    if "påtænkt" in decision_lower:
+        letter_title = f"Påtænkt afgørelse om kørsel til {barnets_fulde_navn}"
+    elif "midlertidig" in decision_lower:
+        letter_title = f"Afgørelse om midlertidig kørsel til {barnets_fulde_navn}"
+    else:
+        letter_title = f"Afgørelse om kørsel til {barnets_fulde_navn}"
+
     for file_type in ["docx"]:
-        file_name = f"{barnets_fulde_navn}_{request_data["dags_dato"]}.{file_type}"
+        file_name = f"{letter_title}.{file_type}"
 
         # ╔══════════════════════════════════════════════════════════════════╗
         # ║ 🔥 TEMPORARY MOCK - api-skabelonmotor is not yet live 🔥          ║
