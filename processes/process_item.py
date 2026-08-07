@@ -121,14 +121,23 @@ def process_item(item_data: dict, item_reference: str):
         "",
     )
 
-    item_data["skift_med_bus"] = next(
+    # antal skift: take the first value present across the koerselsraekker.
+    raw_skift = next(
         (
-            str(koerselsraekke.get("skift_med_bus"))
+            koerselsraekke.get("skift_med_bus")
             for koerselsraekke in sorted_koerselsraekker
             if koerselsraekke.get("skift_med_bus") not in (None, "")
         ),
-        "",
+        None,
     )
+
+    # The template reads "{skift_med_bus} skift". When nothing is entered, or 0
+    # is entered, the caseworkers want it to read "uden skift" rather than
+    # "0 skift" / a blank. Any positive count renders as the number ("2 skift").
+    if raw_skift in (None, "", 0, "0"):
+        item_data["skift_med_bus"] = "uden"
+    else:
+        item_data["skift_med_bus"] = str(raw_skift)
 
     # We create 2 custom variables, used as custom keys to correctly handle block 9.1 and 9.2 in the template text data
     if "midlertidig" in str(afgoerelsesbrev).lower():
