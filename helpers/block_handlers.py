@@ -155,6 +155,9 @@ def handle_custom_sfo(item_data: dict, block: dict):
 
     - Afslag -> nothing. We never grant SFO/klub transport in a rejection.
     - No sfo value -> nothing.
+    - No kørselsrække marked "Kørsel til institution: Ja" -> nothing. The
+      student may well have an SFO, but if no granted kørsel goes there the
+      letter should not say anything about it.
     - sfo names "Klubben Holme Søndergaard" -> the klub entry.
     - sfo has any other value -> the generic SFO entry.
 
@@ -176,12 +179,29 @@ def handle_custom_sfo(item_data: dict, block: dict):
     sfo_value = (item_data.get("sfo") or "").strip()
     normalized_sfo = sfo_value.lower()
 
-    # Suppress on rejection or when the student has no SFO/klub. "Nej" is
-    # treated as "no value" to match the template's negative case.
+    # Two conditions have to hold before the SFO/klub text goes in the letter:
+    # the student must HAVE an institution, and the granted kørsel must actually
+    # go TO it. Having an SFO is not on its own a reason to write about
+    # transport to it.
+    #
+    # view_Letter_Koerselsraekker resolves koersel_til_institution to the
+    # strings "Ja" / "Nej" / NULL, so this is a text comparison. NB: the field
+    # is only filled for taxa-like kørselstyper — the application nulls it for
+    # egenbefordring and skolerejsekort, so a bevilling made up entirely of
+    # those has no "Ja" anywhere and gets no SFO block.
+    koersel_til_institution = any(
+        str(koerselsraekke.get("koersel_til_institution") or "").strip().lower() == "ja"
+        for koerselsraekke in item_data.get("koerselsraekker") or []
+    )
+
+    # Still suppressed on Afslag: we never grant SFO/klub transport in a
+    # rejection. "Nej" is treated as "no value" to match the template's
+    # negative case.
     if (
         afgoerelsesbrev_decision == "Afslag"
         or not sfo_value
         or normalized_sfo == "nej"
+        or not koersel_til_institution
     ):
         block["mapping"] = None
 

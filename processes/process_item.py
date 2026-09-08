@@ -250,7 +250,6 @@ def process_item(item_data: dict, item_reference: str):
 
     row = df.iloc[0]
 
-    request_data["DOKUMENTNUMMER"] = "12325"
     request_data["dags_dato"] = datetime.datetime.now().strftime("%d-%m-%Y")
     request_data["skolens_navn"] = request_data.get("skole")
 
