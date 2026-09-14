@@ -131,7 +131,7 @@ def handle_custom_koerselstyper(item_data: dict, block: dict):
 
 
 # The klub whose text differs from the generic SFO text. Compared
-# case-insensitively against the item_data["sfo"] value.
+# case-insensitively against the item_data["institution"] value.
 
 
 def _find_entry_key(entries: dict, token: str):
@@ -144,22 +144,22 @@ def _find_entry_key(entries: dict, token: str):
     return None
 
 
-def handle_custom_sfo(item_data: dict, block: dict):
-    """Handle Blok 4 (SFO / klub).
+def handle_custom_institution(item_data: dict, block: dict):
+    """Handle Blok 4 (institution — SFO / klub).
 
-    item_data["sfo"] holds the SFO/klub institution the student is attached to
+    item_data["institution"] holds the institution the student is attached to
     (e.g. "SFO - Holme Skole" or "Klubben Holme Søndergaard"), or is empty when
     the student has no SFO/klub. A plain has_value check is no longer enough,
     because the block now has two different texts (SFO vs. Klubben Holme
     Søndergaard). Rules:
 
     - Afslag -> nothing. We never grant SFO/klub transport in a rejection.
-    - No sfo value -> nothing.
+    - No institution value -> nothing.
     - No kørselsrække marked "Kørsel til institution: Ja" -> nothing. The
       student may well have an SFO, but if no granted kørsel goes there the
       letter should not say anything about it.
-    - sfo names "Klubben Holme Søndergaard" -> the klub entry.
-    - sfo has any other value -> the generic SFO entry.
+    - institution names "Klubben Holme Søndergaard" -> the klub entry.
+    - institution has any other value -> the generic SFO entry.
 
     Selection sets block["mapping"] to the matching entry key so the "custom"
     renderer appends that entry's text (or nothing when mapping is None).
@@ -176,8 +176,8 @@ def handle_custom_sfo(item_data: dict, block: dict):
 
     # Lower-case both sides for a lenient comparison, per the field's free-text
     # institution names.
-    sfo_value = (item_data.get("sfo") or "").strip()
-    normalized_sfo = sfo_value.lower()
+    institution_value = (item_data.get("institution") or "").strip()
+    normalized_institution = institution_value.lower()
 
     # Two conditions have to hold before the SFO/klub text goes in the letter:
     # the student must HAVE an institution, and the granted kørsel must actually
@@ -199,8 +199,8 @@ def handle_custom_sfo(item_data: dict, block: dict):
     # negative case.
     if (
         afgoerelsesbrev_decision == "Afslag"
-        or not sfo_value
-        or normalized_sfo == "nej"
+        or not institution_value
+        or normalized_institution == "nej"
         or not koersel_til_institution
     ):
         block["mapping"] = None
@@ -209,7 +209,7 @@ def handle_custom_sfo(item_data: dict, block: dict):
 
     klubben_holme = "klubben holme søndergaard"
 
-    if klubben_holme in normalized_sfo:
+    if klubben_holme in normalized_institution:
         block["mapping"] = _find_entry_key(entries, "klubben")
 
     else:

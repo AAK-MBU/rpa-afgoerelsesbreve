@@ -205,7 +205,7 @@ def process_item(item_data: dict, item_reference: str):
         },
         "custom": {
             "3.1": block_handlers.handle_custom_koerselstyper,
-            "4": block_handlers.handle_custom_sfo,
+            "4": block_handlers.handle_custom_institution,
         },
         "copy": {
             "7.3": ["3.1", "3.2"],
