@@ -140,9 +140,17 @@ if __name__ == "__main__":
     if "--process" in sys.argv:
         asyncio.run(process_workqueue(prod_workqueue))
 
-        ### REMOVE BEFORE PROD
-        prod_workqueue.clear_workqueue()
-        ### REMOVE BEFORE PROD
+        # The queue is deliberately NOT cleared. It was, because every letter
+        # for the same child landed on the same SharePoint file name and the
+        # leftover items were noise; the file name now carries the date, so
+        # handled items can stay.
+        #
+        # Keeping them means each item's state (completed / pending_user /
+        # failed) remains readable by reference, which is what lets the
+        # Forsendelse page show whether a letter was actually produced.
+        #
+        # Nothing prunes the queue yet — that is accepted for now and will be
+        # handled as part of a general data clean-up.
 
     if "--finalize" in sys.argv:
         asyncio.run(finalize(prod_workqueue))

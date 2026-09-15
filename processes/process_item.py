@@ -308,10 +308,19 @@ def process_item(item_data: dict, item_reference: str):
     # Initialize the SharePoint connection once - it is reused for every file we upload
     sharepoint = Sharepoint(**config.SHAREPOINT_KWARGS)
 
-    # Letter title follows the decision type (no date in the name):
+    # Letter title follows the decision type:
     #   Midlertidig kørsel -> "Afgørelse om midlertidig kørsel til NAVN"
     #   Påtænkt afgørelse  -> "Påtænkt afgørelse om kørsel til NAVN"
     #   Everything else    -> "Afgørelse om kørsel til NAVN"
+    #
+    # The date is appended to the file name so a second letter for the same
+    # child does not overwrite the first. Without it the name was identical for
+    # every letter of the same type to the same child, which is why only one
+    # could exist at a time.
+    #
+    # Same-day letters still collide by design — the caseworker deletes the
+    # earlier file when replacing it. Dropping seconds keeps the name readable
+    # and matches how the files are looked for.
     decision_lower = (afgoerelsesbrev_decision or "").lower()
 
     if "påtænkt" in decision_lower:
@@ -321,8 +330,11 @@ def process_item(item_data: dict, item_reference: str):
     else:
         letter_title = f"Afgørelse om kørsel til {barnets_fulde_navn}"
 
+    # dd-mm-yyyy, the same form as the letterhead date (dags_dato).
+    file_name_date = datetime.datetime.now().strftime("%d-%m-%Y")
+
     for file_type in ["docx"]:
-        file_name = f"{letter_title}.{file_type}"
+        file_name = f"{letter_title} - {file_name_date}.{file_type}"
 
         # ╔══════════════════════════════════════════════════════════════════╗
         # ║ 🔥 TEMPORARY MOCK - api-skabelonmotor is not yet live 🔥          ║
