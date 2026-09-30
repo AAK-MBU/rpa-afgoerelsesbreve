@@ -42,6 +42,36 @@ from docx2pdf import convert
 # (e.g. the multi-kørselsrække block in helpers/block_handlers.py).
 LIST_ITEM_MARKER = "[[LIST_ITEM]]"
 
+# A literal bullet character at the start of a line, with the line breaks
+# around it. Templates written in Excel carry their lists this way — the
+# caseworker types "• " because that is what a bullet looks like — and a
+# literal "•" renders as a plain dot in Word, not a list: no indent, no
+# hanging indent, and it is lost entirely when the text is reflowed.
+#
+# Only at the start of a line, so a "•" inside a sentence is left alone.
+# \n+ collapses whatever breaks precede it, because the bullet needs its own
+# paragraph and the template may separate items with one break or two.
+_LITERAL_BULLET = re.compile(r"\n+[ \t]*[•▪‣]\s*")
+_LEADING_BULLET = re.compile(r"^[ \t]*[•▪‣]\s*")
+
+
+def _normalise_bullets(text: str) -> str:
+    """Turn literal bullet characters into LIST_ITEM markers.
+
+    The renderer makes a real Word list out of a paragraph starting with
+    LIST_ITEM_MARKER. Block handlers emit that marker directly; template text
+    from the Excel sheet does not, so its lists were flat text with a dot in
+    front. This bridges the two, and lets a caseworker keep typing bullets the
+    way they always have.
+    """
+
+    if not text:
+        return text
+
+    text = _LITERAL_BULLET.sub("\n\n" + LIST_ITEM_MARKER, text)
+
+    return _LEADING_BULLET.sub(LIST_ITEM_MARKER, text)
+
 
 def _numbering_element(doc):
     """Return the document's <w:numbering> root element.
@@ -147,8 +177,16 @@ def _ensure_bullet_numbering(doc):
     return num_id
 
 
-def _add_bullet_paragraph(doc):
+def _add_bullet_paragraph(doc, tight: bool = False):
     """Add a genuine Word bullet-list paragraph.
+
+    tight removes the space BELOW the paragraph, for every item but the last
+    in a run. Without it each bullet keeps the body style's paragraph spacing
+    and the list renders with a blank line between items — the gap reported on
+    the kørselsrække list. Space ABOVE is removed on every item, so the gap
+    before the list comes from the preceding paragraph alone rather than being
+    added twice; the last item keeps its space below, which separates the list
+    from whatever follows.
 
     Attaches list numbering directly to the paragraph (a real <w:numPr>) so
     Word treats it as an actual bullet list — the glyph renders and the ribbon
@@ -158,6 +196,11 @@ def _add_bullet_paragraph(doc):
     """
 
     paragraph = doc.add_paragraph()
+
+    paragraph.paragraph_format.space_before = Pt(0)
+
+    if tight:
+        paragraph.paragraph_format.space_after = Pt(0)
 
     try:
         num_id = _ensure_bullet_numbering(doc)
@@ -498,15 +541,19 @@ def insert_letter_into_template(template_b64: str, letter_text: str) -> bytes:
             # Remove placeholder paragraph
             parent.remove(paragraph._element)
 
-            paragraphs = letter_text.split("\n\n")
+            paragraphs = _normalise_bullets(letter_text).split("\n\n")
 
             for offset, p in enumerate(paragraphs):
 
                 is_bullet = p.lstrip().startswith(LIST_ITEM_MARKER)
+                next_is_bullet = (
+                    offset + 1 < len(paragraphs)
+                    and paragraphs[offset + 1].lstrip().startswith(LIST_ITEM_MARKER)
+                )
 
                 if is_bullet:
                     p = p.replace(LIST_ITEM_MARKER, "", 1).lstrip()
-                    new_paragraph = _add_bullet_paragraph(doc)
+                    new_paragraph = _add_bullet_paragraph(doc, tight=next_is_bullet)
                 else:
                     new_paragraph = doc.add_paragraph()
 
@@ -650,15 +697,19 @@ def html_to_docx_bytes(text: str) -> bytes:
     # Build DOCX paragraphs
     # ----------------------------------------
     # Paragraphs in the template engine are separated by double line breaks.
-    paragraphs = text.split("\n\n")
+    paragraphs = _normalise_bullets(text).split("\n\n")
 
-    for p in paragraphs:
+    for index, p in enumerate(paragraphs):
 
         is_bullet = p.lstrip().startswith(LIST_ITEM_MARKER)
+        next_is_bullet = (
+            index + 1 < len(paragraphs)
+            and paragraphs[index + 1].lstrip().startswith(LIST_ITEM_MARKER)
+        )
 
         if is_bullet:
             p = p.replace(LIST_ITEM_MARKER, "", 1).lstrip()
-            paragraph = _add_bullet_paragraph(doc)
+            paragraph = _add_bullet_paragraph(doc, tight=next_is_bullet)
         else:
             paragraph = doc.add_paragraph()
 

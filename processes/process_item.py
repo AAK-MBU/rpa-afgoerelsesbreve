@@ -281,6 +281,26 @@ def process_item(item_data: dict, item_reference: str):
         if request_data.get(field):
             request_data[field] = helper_functions.format_danish_date(request_data[field])
 
+    # Same treatment for the numbers: Danish uses a comma as the decimal
+    # separator, and the value arrives from the API as a float, so "6.8 km"
+    # reached the letter instead of "6,8 km".
+    #
+    # gaaafstand_km is the only one that needs it — it is Elev.skoleafstand,
+    # the sole FLOAT among the placeholders. transporttid_i_bus and
+    # skift_med_bus are integers with no decimal to separate, and
+    # bevilget_koereafstand_pr_vej / _pr_dag are already formatted where the
+    # egen-befordring row is read.
+    #
+    # Before resolve_blocks for the same reason as the dates: both the main
+    # template and the block texts have to see the formatted value.
+    number_fields = ("gaaafstand_km",)
+
+    for field in number_fields:
+        if request_data.get(field) not in (None, ""):
+            request_data[field] = helper_functions.format_danish_number(
+                request_data[field]
+            )
+
     # NB: the kørselsrække start/end dates (bevilling_fra/bevilling_til) are
     # intentionally NOT reformatted here — they are still sorted with
     # parse_date (which expects dd-mm-yyyy) inside the kørselstype block
