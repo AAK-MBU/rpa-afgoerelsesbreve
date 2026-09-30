@@ -147,11 +147,29 @@ def process_item(item_data: dict, item_reference: str):
     # Per day = one-way distance × the number of one-way trips the child is in
     # the car: 2 for "Morgen og eftermiddag", otherwise 1. Danish letters use a
     # comma as the decimal separator (6,1 — not 6.1).
+    # Picked on the KØRSELSTYPE, not on "has a distance". The old test was
+    #
+    #     bevilget_koereafstand_pr_vej not in (None, "")
+    #
+    # and 0 passes it. A bevilling with an egen befordring række of 36,1 km
+    # and a cykelbus række of 0 km therefore matched the cykelbus — which
+    # sorts first — and the letter reported "opgjort til 0 km" with a blank
+    # recipient, because a cykelbus række has neither.
+    #
+    # The label is compared with spaces removed as well as the key, because
+    # the lookup is not consistent about them ("Egen befordring" in the
+    # Befordringstype table, "Egenbefordring" elsewhere).
+    def _er_egen_befordring(koerselsraekke: dict) -> bool:
+        key = str(koerselsraekke.get("koerselstype_key") or "").replace("-", "_")
+        label = str(koerselsraekke.get("koerselstype") or "").lower().replace(" ", "")
+
+        return key == "egen_befordring" or label == "egenbefordring"
+
     egen_befordring_koersel = next(
         (
             koerselsraekke
             for koerselsraekke in sorted_koerselsraekker
-            if koerselsraekke.get("bevilget_koereafstand_pr_vej") not in (None, "")
+            if _er_egen_befordring(koerselsraekke)
         ),
         None,
     )
