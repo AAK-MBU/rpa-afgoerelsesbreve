@@ -169,9 +169,24 @@ def process_item(item_data: dict, item_reference: str):
             )
         except (TypeError, ValueError):
             item_data["bevilget_koereafstand_pr_dag"] = ""
+
+        # Who the kørselsgodtgørelse is actually paid to. Set per
+        # kørselsrække in befordringssystemet — either a Part or a
+        # forælder — and resolved to name and CPR by
+        # view_Letter_Koerselsraekker. Hoisted to item_data because the
+        # sentence lives in template block 6.1, which is letter-level text
+        # and cannot reach into a kørselsrække.
+        item_data["koerselsgodtgoerelse_modtager"] = (
+            egen_befordring_koersel.get("koerselsgodtgoerelse_modtager") or ""
+        )
+        item_data["koerselsgodtgoerelse_modtager_cpr"] = (
+            egen_befordring_koersel.get("koerselsgodtgoerelse_modtager_cpr") or ""
+        )
     else:
         item_data["bevilget_koereafstand_pr_vej"] = ""
         item_data["bevilget_koereafstand_pr_dag"] = ""
+        item_data["koerselsgodtgoerelse_modtager"] = ""
+        item_data["koerselsgodtgoerelse_modtager_cpr"] = ""
 
     # We create 2 custom variables, used as custom keys to correctly handle block 9.1 and 9.2 in the template text data
     if "midlertidig" in str(afgoerelsesbrev).lower():
@@ -207,6 +222,15 @@ def process_item(item_data: dict, item_reference: str):
             "3.1": block_handlers.handle_custom_koerselstyper,
             "4": block_handlers.handle_custom_institution,
         },
+        # "Herefter revurderes bevillingen." belongs on the end of the kørsel
+        # sentence when there is only ONE kørselstype — as its own paragraph
+        # under a single line it reads as a stray remark. Under a bulleted
+        # list of several kørselstyper it stays a paragraph of its own, which
+        # is why the merge names the variant it applies to.
+        "merge_into": {
+            "3.2": {"target": "3.1", "when_mapping": "Én kørselstype", "separator": " "},
+        },
+
         "copy": {
             "7.3": ["3.1", "3.2"],
         },

@@ -159,6 +159,55 @@ def resolve_blocks(blocks: list[dict], block_metadata: dict, item_data: dict):
             block["condition"] = "custom_contains"
 
         # -------------------------
+        # MERGE INTO
+        # Fold this block's sentence onto the END of an earlier block's
+        # paragraph instead of letting it stand on its own.
+        #
+        # For "Herefter revurderes bevillingen.", which reads as a dangling
+        # line under a one-line kørsel sentence but is right as its own
+        # paragraph under a bulleted list. So the merge is conditional on what
+        # the target actually rendered — when_mapping names the variant it
+        # applies to, and any other variant is left alone.
+        #
+        # The text comes from the target block as usual, so a caseworker
+        # rewording it in the sheet still works. Merging here rather than in
+        # the block handler is what lets it reach across two blocks, and doing
+        # it in this loop means a later COPY block (7.3 copies 3.1 and 3.2)
+        # sees the merged result rather than both halves.
+        # -------------------------
+        merge = block_metadata.get("merge_into", {}).get(block_id)
+
+        if merge:
+            target = next(
+                (b for b in blocks if b.get("block_id") == merge["target"]),
+                None,
+            )
+
+            mapping = block.get("mapping")
+            renders = bool(mapping) and bool(item_data.get(normalize_key(mapping)))
+            passer = target is not None and normalize_key(
+                target.get("mapping") or ""
+            ) == normalize_key(merge["when_mapping"])
+
+            if renders and passer:
+                egen_tekst = str(next(iter(block.get("entries", {}).values()), "")).strip()
+                maal_noegle = next(iter(target.get("entries", {})), None)
+
+                if egen_tekst and maal_noegle:
+                    target["entries"][maal_noegle] = (
+                        str(target["entries"][maal_noegle]).rstrip()
+                        + merge.get("separator", " ")
+                        + egen_tekst
+                    )
+
+                    # Rendered by the target now — this block must contribute
+                    # nothing, here or to anything copying it.
+                    block["entries"] = {}
+                    block["condition"] = "all"
+
+                    continue
+
+        # -------------------------
         # HAS VALUE
         # -------------------------
         if block_id in block_metadata.get("has_value", []):

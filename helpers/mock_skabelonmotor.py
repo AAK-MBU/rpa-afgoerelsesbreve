@@ -197,11 +197,6 @@ def _add_bullet_paragraph(doc, tight: bool = False):
 
     paragraph = doc.add_paragraph()
 
-    paragraph.paragraph_format.space_before = Pt(0)
-
-    if tight:
-        paragraph.paragraph_format.space_after = Pt(0)
-
     try:
         num_id = _ensure_bullet_numbering(doc)
 
@@ -223,6 +218,21 @@ def _add_bullet_paragraph(doc, tight: bool = False):
             paragraph.style = "List Bullet"
         except Exception:
             paragraph.add_run("• ")
+
+    # AFTER the numbering, never before. <w:pPr> children must appear in the
+    # order the OOXML schema defines, and <w:numPr> comes before <w:spacing>.
+    # Setting the spacing first puts <w:spacing> in an empty <w:pPr>, and the
+    # raw append above then lands <w:numPr> behind it — Word reads that as
+    # malformed and silently drops the numbering, so the paragraph renders as
+    # plain text with no bullet at all.
+    #
+    # Going through paragraph_format here is what keeps it right:
+    # python-docx's get_or_add_spacing() inserts the element at its schema
+    # position relative to the numPr that already exists.
+    paragraph.paragraph_format.space_before = Pt(0)
+
+    if tight:
+        paragraph.paragraph_format.space_after = Pt(0)
 
     return paragraph
 
