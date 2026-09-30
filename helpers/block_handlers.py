@@ -3,13 +3,25 @@
 from helpers import helper_functions
 
 
-def _format_koerselsraekke(data: dict) -> str:
+def _format_koerselsraekke(data: dict, lille_begyndelsesbogstav: bool = False) -> str:
     """
     Format a single kørselsrække, e.g.:
         "Skånekørsel morgen [mandag, onsdag, fredag] fra 01-03-2026 til 01-07-2027"
 
     - Tidspunkt follows the kørselstype (lowercased) whenever it is filled.
     - Weekdays follow in brackets (lowercased), omitted when "Alle".
+
+    lille_begyndelsesbogstav lowercases the FIRST letter of the kørselstype,
+    for the single-row sentence where it runs on from "i form af" and a capital
+    reads as a mistake:
+
+        Kørslen bevilges i form af cykelbus fra 30-08-2026 til 30-08-2027.
+
+    Only the first letter, so "Egen befordring" becomes "egen befordring" and
+    not "egen Befordring". Safe for every seeded kørselstype — all nine are
+    ordinary common nouns, none a proper name that has to keep its capital.
+
+    Left alone in the bulleted list, where each item starts its own line.
     """
 
     koerselstype = (
@@ -17,6 +29,9 @@ def _format_koerselsraekke(data: dict) -> str:
         or data.get("koerselstype_key")
         or "kørsel"
     )
+
+    if lille_begyndelsesbogstav and koerselstype:
+        koerselstype = koerselstype[0].lower() + koerselstype[1:]
 
     start = helper_functions.format_danish_date(data.get("bevilling_fra"))
     slut = helper_functions.format_danish_date(data.get("bevilling_til"))
@@ -101,7 +116,11 @@ def handle_custom_koerselstyper(item_data: dict, block: dict):
     # ----------------------------------------
 
     if antal == 1:
-        text = f"Kørslen bevilges i form af {_format_koerselsraekke(sorted_koerselsraekker[0])}."
+        # Lower case: the type runs on from "i form af" inside one sentence.
+        text = (
+            "Kørslen bevilges i form af "
+            f"{_format_koerselsraekke(sorted_koerselsraekker[0], lille_begyndelsesbogstav=True)}."
+        )
 
         block["mapping"] = "Én kørselstype"
         block["entries"] = {"Én kørselstype": text}
