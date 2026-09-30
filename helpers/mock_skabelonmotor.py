@@ -73,6 +73,37 @@ def _normalise_bullets(text: str) -> str:
     return _LEADING_BULLET.sub(LIST_ITEM_MARKER, text)
 
 
+def _drop_blank_between_bullets(paragraphs: list[str]) -> list[str]:
+    """Remove whitespace-only paragraphs that sit BETWEEN two bullets.
+
+    A template authored in Excel picks up stray blank lines, and an empty
+    paragraph between two list items costs twice: it renders as a blank line
+    of its own, and it separates the two bullets so the "is the next paragraph
+    a bullet?" test fails — which leaves the first item with the body style's
+    space below it as well. That is the wider gap: a blank paragraph plus the
+    spacing that should have been suppressed.
+
+    Only between bullets. A blank paragraph elsewhere may be deliberate
+    spacing between sections, and is left alone.
+    """
+
+    resultat: list[str] = []
+
+    for i, p in enumerate(paragraphs):
+        if not p.strip():
+            foer = next((q for q in reversed(resultat) if q.strip()), "")
+            efter = next((q for q in paragraphs[i + 1:] if q.strip()), "")
+
+            if foer.lstrip().startswith(LIST_ITEM_MARKER) and efter.lstrip().startswith(
+                LIST_ITEM_MARKER
+            ):
+                continue
+
+        resultat.append(p)
+
+    return resultat
+
+
 def _numbering_element(doc):
     """Return the document's <w:numbering> root element.
 
@@ -551,7 +582,9 @@ def insert_letter_into_template(template_b64: str, letter_text: str) -> bytes:
             # Remove placeholder paragraph
             parent.remove(paragraph._element)
 
-            paragraphs = _normalise_bullets(letter_text).split("\n\n")
+            paragraphs = _drop_blank_between_bullets(
+                _normalise_bullets(letter_text).split("\n\n")
+            )
 
             for offset, p in enumerate(paragraphs):
 
@@ -707,7 +740,9 @@ def html_to_docx_bytes(text: str) -> bytes:
     # Build DOCX paragraphs
     # ----------------------------------------
     # Paragraphs in the template engine are separated by double line breaks.
-    paragraphs = _normalise_bullets(text).split("\n\n")
+    paragraphs = _drop_blank_between_bullets(
+        _normalise_bullets(text).split("\n\n")
+    )
 
     for index, p in enumerate(paragraphs):
 
