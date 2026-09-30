@@ -42,6 +42,17 @@ from docx2pdf import convert
 # (e.g. the multi-kørselsrække block in helpers/block_handlers.py).
 LIST_ITEM_MARKER = "[[LIST_ITEM]]"
 
+# Colours that mark a PLACEHOLDER in the template rather than styling meant
+# for the reader. The skabelondata keeps them — a caseworker editing the sheet
+# needs to see at a glance which words are filled in by the system — but they
+# must not reach the finished letter, where a citizen would just see some
+# words inexplicably in blue.
+#
+# Held as a set of colours rather than stripped from the markup, so the HTML
+# stays balanced: the opening span is still parsed and its </span> still
+# closes, the colour is simply not applied to the run.
+_PLACEHOLDER_FARVER = {"0f9ed5", "00b0f0"}
+
 # A literal bullet character at the start of a line, with the line breaks
 # around it. Templates written in Excel carry their lists this way — the
 # caseworker types "• " because that is what a bullet looks like — and a
@@ -562,7 +573,10 @@ def insert_letter_into_template(template_b64: str, letter_text: str) -> bytes:
 
             if node.name in ["span", "font"]:
                 match = re.search(r"#([0-9A-Fa-f]{6})", str(node))
-                if match:
+
+                # A placeholder highlight is dropped here; every other colour
+                # in the template is deliberate and is kept.
+                if match and match.group(1).lower() not in _PLACEHOLDER_FARVER:
                     new_format["color"] = match.group(1)
 
             # Recursively process child nodes so formatting cascades
@@ -729,7 +743,10 @@ def html_to_docx_bytes(text: str) -> bytes:
 
             if node.name in ["span", "font"]:
                 match = re.search(r"#([0-9A-Fa-f]{6})", str(node))
-                if match:
+
+                # A placeholder highlight is dropped here; every other colour
+                # in the template is deliberate and is kept.
+                if match and match.group(1).lower() not in _PLACEHOLDER_FARVER:
                     new_format["color"] = match.group(1)
 
             # Recursively process child nodes so formatting cascades
@@ -834,8 +851,12 @@ def replace_placeholders(text: str, data: dict) -> str:
         if value is None:
             return match.group(0)
 
-        # Wrap replacements in a blue color span so inserted values are visually distinguishable in the final document.
-        return f'<span style="color:#0F9ED5">{value}</span>'
+        # Plain text. The value used to be wrapped in a blue span so it stood
+        # out while the templates were being built, but the letter goes to a
+        # citizen, for whom the highlight means nothing. The template's own
+        # blue is ignored at render time for the same reason — see
+        # _PLACEHOLDER_FARVER.
+        return str(value)
 
     # Replace all placeholders of the form {key}
     return re.sub(r"\{([^{}]+)\}", repl, text)
