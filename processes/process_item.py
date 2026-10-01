@@ -8,9 +8,8 @@ import re
 
 import requests
 
-from mbu_msoffice_integration.sharepoint_class import Sharepoint
 
-from helpers import config, helper_functions, block_handlers
+from helpers import config, go_journalisering, helper_functions, block_handlers
 # 🔥 TEMPORARY - remove together with helpers/mock_skabelonmotor.py when the API is live
 from helpers import mock_skabelonmotor
 
@@ -367,9 +366,6 @@ def process_item(item_data: dict, item_reference: str):
     # import sys
     # sys.exit()
 
-    # Initialize the SharePoint connection once - it is reused for every file we upload
-    sharepoint = Sharepoint(**config.SHAREPOINT_KWARGS)
-
     # Letter title follows the decision type:
     #   Midlertidig kørsel -> "Afgørelse om midlertidig kørsel til NAVN"
     #   Påtænkt afgørelse  -> "Påtænkt afgørelse om kørsel til NAVN"
@@ -431,9 +427,29 @@ def process_item(item_data: dict, item_reference: str):
         #
         # file_bytes = response.content
 
-        # Upload the created letter to SharePoint instead of saving it locally
-        sharepoint.upload_file_from_bytes(
-            binary_content=file_bytes,
+        # Journalisér brevet på barnets sag i GO.
+        #
+        # Afløser en upload til et SharePoint-bibliotek: brevet hører til på
+        # sagen, ikke i en mappe ved siden af den, og på sagen er det synligt
+        # for alle der arbejder med barnet.
+        #
+        # Dokumentet FINALISERES IKKE. GO låser et færdiggjort dokument, og et
+        # afgørelsesbrev skal kunne rettes bagefter — se
+        # helpers/go_journalisering.py, hvor der slet ikke findes kode til at
+        # finalisere.
+        sags_nummer = str(item_data.get("sags_nummer") or "").strip()
+
+        if not sags_nummer:
+            raise ValueError(
+                "Brevet kan ikke journaliseres: bevillingen har intet "
+                "sags_nummer (esdh_noegle), så der er ingen sag i GO at lægge "
+                "det på."
+            )
+
+        go_journalisering.journaliser_brev(
+            case_id=sags_nummer,
             file_name=file_name,
-            folder_name=config.FOLDER_NAME,
+            file_bytes=file_bytes,
+            document_title=letter_title,
+            document_date=file_name_date,
         )

@@ -12,6 +12,17 @@ MAX_RETRIES = 3  # transient failure retries per item
 RETRY_BASE_DELAY = 0.5  # seconds (exponential backoff)
 
 # SharePoint stuff
+# ----------------------
+# SharePoint — IKKE LÆNGERE I BRUG
+#
+# Afgørelsesbreve journaliseres nu på barnets sag i GO i stedet for at blive
+# lagt i et SharePoint-bibliotek. Se helpers/go_journalisering.py.
+#
+# Opsætningen står tilbage, fordi den er det eneste sted de fire
+# miljøvariabler er dokumenteret, og fordi en tilbagerulning ellers skulle
+# finde dem frem igen. Slet blokken — og TENANT / CLIENT_ID /
+# APPREG_THUMBPRINT / GRAPH_CERT_PEM fra miljøet — når GO har kørt stabilt.
+# ----------------------
 SHAREPOINT_SITE_URL = "https://aarhuskommune.sharepoint.com"
 
 SHAREPOINT_SITE_NAME = "BudgetogRegnskab-Samarbejdsprojekter-Befordring"
