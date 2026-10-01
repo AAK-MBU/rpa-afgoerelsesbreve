@@ -7,7 +7,10 @@ requires-python = ">=3.13"
 dependencies = [
   "automation-server-client @ git+https://github.com/odense-rpa/automation-server-client.git",
   "mbu_msoffice_integration>=1.0.1",
-  "mbu-dev-shared-components[solteqtand]>=4.3.0",
+  # getorganized-extraen trækker requests_ntlm, som
+  # mbu_dev_shared_components.getorganized.auth importerer. Uden den fejler
+  # helpers/go_journalisering.py allerede ved import.
+  "mbu-dev-shared-components[getorganized]>=4.3.0",
   "mbu-rpa-core",
   "openpyxl >= 3.1.2",
   "pandas",
