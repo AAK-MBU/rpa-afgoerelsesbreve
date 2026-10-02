@@ -460,7 +460,7 @@ def format_danish_date(value):
 
 def format_danish_number(value):
     """Format a number with a Danish comma decimal separator and no trailing
-    zeros, e.g. 6.1 -> "6,1", 6.0 -> "6", 12.25 -> "12,25".
+    zeros, e.g. 6.1 -> "6,1", 6.0 -> "6", 6.123 -> "6,1".
 
     Returns "" for empty/None and leaves values that are not numeric unchanged.
     """
@@ -473,10 +473,19 @@ def format_danish_number(value):
     except (TypeError, ValueError):
         return value
 
-    # Round to at most 2 decimals (distances), drop trailing zeros, then use a
-    # comma as the decimal separator. rstrip only trims the fractional part
-    # because it stops at the "." (e.g. "100.00" -> "100." -> "100").
-    text = f"{number:.2f}".rstrip("0").rstrip(".")
+    # ONE decimal, matching every place a distance is produced: both distance
+    # endpoints round to 1, the nightly run stores what they return, the
+    # recalculate button rounds to 1, and manual entry is step="0.1".
+    #
+    # Enforced here as well as there, because this is the last step before the
+    # number reaches a citizen. A value that somehow carries more precision —
+    # a column written before the rule was consistent, a future caller that
+    # forgets — must not put "6,12 km" in an afgørelsesbrev.
+    #
+    # Trailing zeros are then dropped, so 6.0 reads "6" rather than "6,0".
+    # rstrip only trims the fractional part because it stops at the "."
+    # (e.g. "100.0" -> "100." -> "100").
+    text = f"{number:.1f}".rstrip("0").rstrip(".")
 
     return text.replace(".", ",")
 
