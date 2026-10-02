@@ -34,8 +34,6 @@ from docx.opc.packuri import PackURI
 from docx.parts.numbering import NumberingPart
 from docx.shared import RGBColor, Pt
 
-from docx2pdf import convert
-
 
 # Paragraphs starting with this marker are rendered as Word bullet-list items
 # (punktopstilling) rather than plain paragraphs. Emitted by block handlers
@@ -791,7 +789,23 @@ def html_to_docx_bytes(text: str) -> bytes:
 def convert_docx_to_pdf(docx_bytes: bytes) -> bytes:
     """
     Helper function to convert a Word docx to pdf bytes
+
+    docx2pdf is imported HERE rather than at module scope because it drives
+    Microsoft Word through COM, and so exists only on Windows. That single
+    import was the whole reason this process had to run on a Windows machine —
+    nothing else in the stack needs one.
+
+    Nothing calls this today: process_item asks only for "docx"
+    (`for file_type in ["docx"]`), so the pdf branch above is unreachable.
+    Moving the import inside means the module loads on Linux, and the only
+    thing that would fail is a path nobody takes.
+
+    If PDF output is ever wanted again, LibreOffice
+    (`soffice --headless --convert-to pdf`) does the same job on Linux without
+    a Word licence.
     """
+
+    from docx2pdf import convert
 
     with tempfile.TemporaryDirectory() as tmpdir:
 
