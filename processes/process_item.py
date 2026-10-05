@@ -97,9 +97,18 @@ def process_item(item_data: dict, item_reference: str):
                 )
 
 
-    # Used by the block engine for selecting snippets
-    custom_key_overrides["koerselstype"] = koerselstype_keys
-    custom_key_overrides["koerselstype_tillaeg"] = koerselstype_tillaeg
+    # Used by the block engine for selecting snippets.
+    #
+    # DE-DUPLICATED, because the engine's "equals" branch appends one text per
+    # item in the list. A bevilling normally holds several kørselsrækker of the
+    # same type — morning and afternoon are two rows — so without this the
+    # kørselstype paragraph was printed once per række rather than once. The
+    # same goes for a tillæg granted on more than one række.
+    #
+    # dict.fromkeys keeps the first occurrence, and the rækker are already
+    # sorted by date, so the order the snippets appear in does not change.
+    custom_key_overrides["koerselstype"] = list(dict.fromkeys(koerselstype_keys))
+    custom_key_overrides["koerselstype_tillaeg"] = list(dict.fromkeys(koerselstype_tillaeg))
 
     # Used by normal placeholder replacement: {koerselstype}
     unique_koerselstype_labels = list(dict.fromkeys(koerselstype_labels))
@@ -196,8 +205,11 @@ def process_item(item_data: dict, item_reference: str):
         item_data["koerselsgodtgoerelse_modtager"] = (
             egen_befordring_koersel.get("koerselsgodtgoerelse_modtager") or ""
         )
-        item_data["koerselsgodtgoerelse_modtager_cpr"] = (
-            egen_befordring_koersel.get("koerselsgodtgoerelse_modtager_cpr") or ""
+        # Formatted as DDMMYY-XXXX, like barnets_cpr. The column stores ten
+        # bare digits, and the letter is read by a citizen — a CPR without the
+        # dash is not how anyone writes one.
+        item_data["koerselsgodtgoerelse_modtager_cpr"] = helper_functions.format_cpr(
+            egen_befordring_koersel.get("koerselsgodtgoerelse_modtager_cpr")
         )
     else:
         item_data["bevilget_koereafstand_pr_vej"] = ""
