@@ -47,6 +47,14 @@ def process_item(item_data: dict, item_reference: str):
         else None
     )
 
+    decision_lower = (afgoerelsesbrev_decision or "").lower()
+
+    # A påtænkt afgørelse announces what we INTEND to decide; it grants nothing
+    # and ends nothing. Several blocks are written for letters that actually
+    # decide, so the two cases have to be told apart — see blocks 7.4 and 8 in
+    # block_metadata below, and the letter title further down.
+    er_paataenkt = "påtænkt" in decision_lower
+
     # The snippet below is responsible for a couple things:
     # 1. We extract koerselsraekker and sort them by their start and end dates, so that we can initialize a koersel_slutdato key, that is the end date of the latest koerselstype
     # 2. We create a list of koerselstyper, that is used in the skabelonmotor to correctly identify which text snippets to use with regards to koerselstyper
@@ -243,7 +251,16 @@ def process_item(item_data: dict, item_reference: str):
             "1.1": item_data.get("brev_i_forbindelse_med"),
             "2.2": item_data.get("befordringsudvalg_resultat"),
             "5": afgoerelsesbrev_decision,
-            "8": afgoerelsesbrev_decision,
+            # Block 8's only entry is keyed on the bare word "Påtænkt", but the
+            # decision is always "Påtænkt afslag" / "Påtænkt ophør" / "Påtænkt
+            # bevilling". custom_key is an exact match, so passing the decision
+            # never matched and the block was silently dropped from EVERY
+            # påtænkt letter. Pass the word the entry is actually keyed on.
+            #
+            # None for every other letter: the block then keeps its default
+            # "equals" condition, which looks the full afgørelsesbrev text up
+            # among block 8's entries, finds nothing, and appends nothing.
+            "8": "Påtænkt" if er_paataenkt else None,
             "9.1": klagevejledning,
             "9.2": regler,
         },
@@ -264,7 +281,16 @@ def process_item(item_data: dict, item_reference: str):
             "7.3": ["3.1", "3.2"],
         },
         "custom_contains": {
-            "7.4": afgoerelsesbrev_decision,
+            # Block 7.4 is "Alle bevillinger" — text that belongs on a letter
+            # which actually GRANTS. The match is on any word of the decision
+            # appearing in the entry key, so "Påtænkt bevilling" picked it up
+            # through the word "bevilling" and was treated as a bevillingsbrev.
+            # It is not one: nothing is granted until the påtænkt afgørelse has
+            # been through partshøring and a real afgørelse follows.
+            #
+            # Empty mapping rather than a removed key: create_letter skips a
+            # custom_contains block whose mapping is falsy.
+            "7.4": "" if er_paataenkt else afgoerelsesbrev_decision,
         },
         "all": [
             "7.5",
@@ -391,9 +417,7 @@ def process_item(item_data: dict, item_reference: str):
     # Same-day letters still collide by design — the caseworker deletes the
     # earlier file when replacing it. Dropping seconds keeps the name readable
     # and matches how the files are looked for.
-    decision_lower = (afgoerelsesbrev_decision or "").lower()
-
-    if "påtænkt" in decision_lower:
+    if er_paataenkt:
         letter_title = f"Påtænkt afgørelse om kørsel til {barnets_fulde_navn}"
     elif "midlertidig" in decision_lower:
         letter_title = f"Afgørelse om midlertidig kørsel til {barnets_fulde_navn}"
