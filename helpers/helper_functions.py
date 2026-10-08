@@ -231,7 +231,7 @@ def get_db_connection_string():
     Database helper to retrieve the database connection string
     """
 
-    return os.getenv("DBCONNECTIONSTRINGDEV")
+    return os.getenv("DBCONNECTIONSTRINGPROD")
 
 
 def read_sql(query: str = "", params: dict = None, conn_string: str = "") -> pd.DataFrame:
