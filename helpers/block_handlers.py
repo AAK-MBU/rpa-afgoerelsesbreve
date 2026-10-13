@@ -3,7 +3,7 @@
 from helpers import helper_functions
 
 
-def _format_koerselsraekke(data: dict, lille_begyndelsesbogstav: bool = False) -> str:
+def _format_koerselsraekke(data: dict) -> str:
     """
     Format a single kørselsrække, e.g.:
         "Skånekørsel morgen [mandag, onsdag, fredag] fra 01-03-2026 til 01-07-2027"
@@ -11,17 +11,9 @@ def _format_koerselsraekke(data: dict, lille_begyndelsesbogstav: bool = False) -
     - Tidspunkt follows the kørselstype (lowercased) whenever it is filled.
     - Weekdays follow in brackets (lowercased), omitted when "Alle".
 
-    lille_begyndelsesbogstav lowercases the FIRST letter of the kørselstype,
-    for the single-row sentence where it runs on from "i form af" and a capital
-    reads as a mistake:
-
-        Kørslen bevilges i form af cykelbus fra 30-08-2026 til 30-08-2027.
-
-    Only the first letter, so "Egen befordring" becomes "egen befordring" and
-    not "egen Befordring". Safe for every seeded kørselstype — all nine are
-    ordinary common nouns, none a proper name that has to keep its capital.
-
-    Left alone in the bulleted list, where each item starts its own line.
+    The kørselstype keeps its capital: every row is a bullet starting its own
+    line. It was lowercased once, for a one-row sentence that ran on from
+    "i form af" — that variant no longer exists.
     """
 
     koerselstype = (
@@ -29,9 +21,6 @@ def _format_koerselsraekke(data: dict, lille_begyndelsesbogstav: bool = False) -
         or data.get("koerselstype_key")
         or "kørsel"
     )
-
-    if lille_begyndelsesbogstav and koerselstype:
-        koerselstype = koerselstype[0].lower() + koerselstype[1:]
 
     start = helper_functions.format_danish_date(data.get("bevilling_fra"))
     slut = helper_functions.format_danish_date(data.get("bevilling_til"))
@@ -112,25 +101,15 @@ def handle_custom_koerselstyper(item_data: dict, block: dict):
     )
 
     # ----------------------------------------
-    # Single transport row
+    # The granted rows
     # ----------------------------------------
 
-    if antal == 1:
-        # Lower case: the type runs on from "i form af" inside one sentence.
-        text = (
-            "Kørslen bevilges i form af "
-            f"{_format_koerselsraekke(sorted_koerselsraekker[0], lille_begyndelsesbogstav=True)}."
-        )
-
-        block["mapping"] = "Én kørselstype"
-        block["entries"] = {"Én kørselstype": text}
-
-        return block
-
-    # ----------------------------------------
-    # Multiple transport rows
-    # ----------------------------------------
-
+    # One row renders exactly like several: the intro line, then a bulleted
+    # list. Befordring dropped the separate one-row sentence ("Kørslen
+    # bevilges i form af ...") so that every bevillingsbrev reads the same way
+    # whatever it grants — which also means the shape of the letter no longer
+    # changes when a kørselsrække is added to or removed from a bevilling.
+    #
     # Intro line, then one paragraph per kørselsrække. Each list item is
     # prefixed with the "[[LIST_ITEM]]" marker (and paragraphs are separated by
     # blank lines), which the skabelonmotor renderer turns into a real Word
@@ -143,6 +122,8 @@ def handle_custom_koerselstyper(item_data: dict, block: dict):
 
     text = "\n\n".join(parts)
 
+    # Still keyed "Flere kørselstyper" with one row. The name is Befordring's
+    # own, from the template sheet, and it is the only granting variant left.
     block["mapping"] = "Flere kørselstyper"
     block["entries"] = {"Flere kørselstyper": text}
 

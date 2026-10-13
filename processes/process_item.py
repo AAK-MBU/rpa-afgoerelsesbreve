@@ -268,14 +268,14 @@ def process_item(item_data: dict, item_reference: str):
             "3.1": block_handlers.handle_custom_koerselstyper,
             "4": block_handlers.handle_custom_institution,
         },
-        # "Herefter revurderes bevillingen." belongs on the end of the kørsel
-        # sentence when there is only ONE kørselstype — as its own paragraph
-        # under a single line it reads as a stray remark. Under a bulleted
-        # list of several kørselstyper it stays a paragraph of its own, which
-        # is why the merge names the variant it applies to.
-        "merge_into": {
-            "3.2": {"target": "3.1", "when_mapping": "Én kørselstype", "separator": " "},
-        },
+        # Nothing merges any more. "Herefter revurderes bevillingen." used to
+        # be appended to block 3.1 when it held the one-kørselstype SENTENCE,
+        # where a paragraph of its own under a single line read as a stray
+        # remark. Block 3.1 is now always a bulleted list — Befordring dropped
+        # the one-row variant — and a sentence appended to the last bullet
+        # would read as part of that bullet. So 3.2 stays its own paragraph,
+        # which is what it already did for every multi-row letter.
+        "merge_into": {},
 
         "copy": {
             "7.3": ["3.1", "3.2"],

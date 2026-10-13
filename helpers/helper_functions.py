@@ -163,11 +163,14 @@ def resolve_blocks(blocks: list[dict], block_metadata: dict, item_data: dict):
         # Fold this block's sentence onto the END of an earlier block's
         # paragraph instead of letting it stand on its own.
         #
-        # For "Herefter revurderes bevillingen.", which reads as a dangling
-        # line under a one-line kørsel sentence but is right as its own
-        # paragraph under a bulleted list. So the merge is conditional on what
-        # the target actually rendered — when_mapping names the variant it
-        # applies to, and any other variant is left alone.
+        # Conditional on what the target actually rendered: when_mapping names
+        # the variant it applies to, and any other variant is left alone.
+        #
+        # NOTHING is configured to merge today. It was built for "Herefter
+        # revurderes bevillingen.", which read as a dangling line under the
+        # one-kørselstype sentence — a variant Befordring has since dropped,
+        # so that block now always stands on its own. The mechanism is kept
+        # because the condition is the hard part, not the folding.
         #
         # The text comes from the target block as usual, so a caseworker
         # rewording it in the sheet still works. Merging here rather than in
