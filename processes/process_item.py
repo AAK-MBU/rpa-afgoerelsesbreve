@@ -55,6 +55,41 @@ def process_item(item_data: dict, item_reference: str):
     # block_metadata below, and the letter title further down.
     er_paataenkt = "påtænkt" in decision_lower
 
+    # FAIL-SAFE. A letter that refuses kørsel or ends it has no business
+    # describing how that kørsel works, so everything block 6 is built from is
+    # emptied here rather than guarded in each of its three parts.
+    #
+    # Block 6 was written on the assumption that an afslag carries no
+    # kørselsrækker. It does not hold: a caseworker attached a kørselsrække to
+    # a bevilling meant as an afslag, and block 6.1 duly told the family about
+    # ferier and afbestilling for kørsel they had just been refused. Whether
+    # the rækker should be there at all is a separate question — this makes the
+    # letter correct either way.
+    #
+    # Both sources go, because block 6 has two:
+    #   6.1 / 6.2  kørselstype and tillæg, from the kørselsrækker
+    #   6.3        hjælpemidler, which hang off the BEVILLING and would
+    #              otherwise still print "… skal bruge magnetsele under kørslen"
+    #
+    # Written back onto item_data, not just to the locals, so block 3's handler
+    # sees it too. That closes a second hole in the same assumption: its own
+    # afslag branch tests `== "Afslag"`, which a "Påtænkt afslag: …" letter
+    # never matches, so a påtænkt afslag with rækker attached would have
+    # printed "Kørslen bevilges i følgende form:".
+    #
+    # ophoersdato is included as its own signal because that, not the decision
+    # text, is what block 3 already treats as "this letter ends the kørsel".
+    afviser_eller_afslutter = (
+        "afslag" in decision_lower
+        or "ophør" in decision_lower
+        or bool(item_data.get("ophoersdato"))
+    )
+
+    if afviser_eller_afslutter:
+        item_data["koerselsraekker"] = []
+        hjaelpemidler = []
+        custom_key_overrides["hjaelpemidler"] = hjaelpemidler
+
     # The snippet below is responsible for a couple things:
     # 1. We extract koerselsraekker and sort them by their start and end dates, so that we can initialize a koersel_slutdato key, that is the end date of the latest koerselstype
     # 2. We create a list of koerselstyper, that is used in the skabelonmotor to correctly identify which text snippets to use with regards to koerselstyper
