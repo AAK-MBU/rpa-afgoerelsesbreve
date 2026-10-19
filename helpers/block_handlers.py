@@ -6,10 +6,17 @@ from helpers import helper_functions
 def _format_koerselsraekke(data: dict) -> str:
     """
     Format a single kørselsrække, e.g.:
-        "Skånekørsel morgen [mandag, onsdag, fredag] fra 01-03-2026 til 01-07-2027"
+        "Skånekørsel mellem hjem og skole [mandag, onsdag, fredag] fra 01-03-2026 til 01-07-2027"
 
-    - Tidspunkt follows the kørselstype (lowercased) whenever it is filled.
+    - Rutetype follows the kørselstype (lowercased) whenever it is filled.
     - Weekdays follow in brackets (lowercased), omitted when "Alle".
+
+    Rutetype sits where TIDSPUNKT used to. Befordring's own note on the
+    restructure says why: "Tidspunkt er blevet overflødigt med ovenstående
+    formuleringer" — the six rutetype names state where a trip starts and
+    ends, and therefore when it happens. "Fra hjem til skole" IS the morning;
+    "Mellem hjem og skole" is both legs. Printing both would say the same
+    thing twice, and tidspunkt is on its way out of the database.
 
     The kørselstype keeps its capital: every row is a bullet starting its own
     line. It was lowercased once, for a one-row sentence that ran on from
@@ -24,18 +31,18 @@ def _format_koerselsraekke(data: dict) -> str:
 
     start = helper_functions.format_danish_date(data.get("bevilling_fra"))
     slut = helper_functions.format_danish_date(data.get("bevilling_til"))
-    tidspunkt = data.get("tidspunkt")
+    rutetype = data.get("rutetype")
     dage = data.get("dage")
 
-    tidspunkt_text = ""
-    if tidspunkt:
-        tidspunkt_text = f" {tidspunkt.lower()}"
+    rutetype_text = ""
+    if rutetype:
+        rutetype_text = f" {rutetype.lower()}"
 
     dage_text = ""
     if dage and dage.lower() != "alle":
         dage_text = f" [{dage.lower()}]"
 
-    return f"{koerselstype}{tidspunkt_text}{dage_text} fra {start} til {slut}"
+    return f"{koerselstype}{rutetype_text}{dage_text} fra {start} til {slut}"
 
 
 def handle_custom_koerselstyper(item_data: dict, block: dict):

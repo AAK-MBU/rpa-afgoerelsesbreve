@@ -196,8 +196,8 @@ def process_item(item_data: dict, item_reference: str):
     #   {bevilget_koereafstand_pr_vej} — one-way distance ("Km i bil")
     #   {bevilget_koereafstand_pr_dag} — max per day ("Km pr dag (bil)")
     # Per day = one-way distance × the number of one-way trips the child is in
-    # the car: 2 for "Morgen og eftermiddag", otherwise 1. Danish letters use a
-    # comma as the decimal separator (6,1 — not 6.1).
+    # the car — see _ture_pr_dag. Danish letters use a comma as the decimal
+    # separator (6,1 — not 6.1).
     # Picked on the KØRSELSTYPE, not on "has a distance". The old test was
     #
     #     bevilget_koereafstand_pr_vej not in (None, "")
@@ -216,6 +216,50 @@ def process_item(item_data: dict, item_reference: str):
 
         return key == "egen_befordring" or label == "egenbefordring"
 
+    def _ture_pr_dag(koerselsraekke: dict) -> int:
+        """How many one-way trips a day the kørselsrække pays for.
+
+        Answered from the RUTETYPE alone. Both "Mellem …" routes cover the
+        whole day and therefore two one-way trips; every "Fra X til Y" route
+        covers one.
+
+        That includes "Mellem skole, klub, og hjem", which does not follow
+        from reading the name: it lists only afternoon legs, but Befordring
+        grants driving all day under it. The prefix match gets it right; a
+        rule written from the place names would not.
+
+        Tidspunkt is deliberately not consulted, even where a row still has
+        one. It answered the same question less precisely, and keeping it as a
+        first source would mean two rules that can disagree — a row carrying
+        "Morgen" on a "Mellem hjem og skole" rutetype would pay for one trip
+        where the route grants two.
+
+        Deliberately NOT the same question as harEftermiddagForRutetype in the
+        frontend, which asks whether there IS an afternoon leg. "Fra skole til
+        hjem" has one and is still a single trip, so reusing that rule here
+        would double the km for four of the six rutetyper.
+
+        Matched on the prefix rather than the two full names, because "Mellem"
+        is what carries the meaning — and because the second comma in "Mellem
+        skole, klub, og hjem" is spelled differently in Befordring's own
+        documents than in the lookup table.
+
+        Falls back to 1 where no rutetype is set, which is the under-reporting
+        direction, so it is logged rather than left silent. rutetype_id is
+        still nullable; once it is NOT NULL this cannot happen.
+        """
+
+        rutetype = str(koerselsraekke.get("rutetype") or "").strip().lower()
+
+        if not rutetype:
+            logger.warning(
+                "Koerselsraekke %s har ingen rutetype - km pr. dag regnes som EN tur",
+                koerselsraekke.get("koersel_id"),
+            )
+            return 1
+
+        return 2 if rutetype.startswith("mellem") else 1
+
     egen_befordring_koersel = next(
         (
             koerselsraekke
@@ -227,8 +271,7 @@ def process_item(item_data: dict, item_reference: str):
 
     if egen_befordring_koersel:
         km_pr_vej = egen_befordring_koersel.get("bevilget_koereafstand_pr_vej")
-        tidspunkt = str(egen_befordring_koersel.get("tidspunkt") or "").lower()
-        trips_per_day = 2 if ("morgen" in tidspunkt and "eftermiddag" in tidspunkt) else 1
+        trips_per_day = _ture_pr_dag(egen_befordring_koersel)
 
         item_data["bevilget_koereafstand_pr_vej"] = helper_functions.format_danish_number(km_pr_vej)
 
