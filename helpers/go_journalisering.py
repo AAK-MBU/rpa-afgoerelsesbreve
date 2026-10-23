@@ -16,7 +16,9 @@ De to kald er dem go_journalisering selv bruger:
 """
 
 import logging
+import time
 
+import requests
 from mbu_dev_shared_components.database.connection import RPAConnection
 from mbu_dev_shared_components.getorganized import documents, objects
 
@@ -28,6 +30,19 @@ _JOURNALISER_PATH = "/_goapi/Documents/MarkMultipleAsCaseRecord/ByDocumentId"
 
 # Afgørelsesbreve går til borgeren.
 _KORRESPONDANCE = "Udgående"
+
+
+# GO svarer en gang imellem 500 med {"Message":"An error has occurred."} på et
+# kald, der virker et øjeblik senere. Beskeden siger intet, og den dækker både
+# et sekunds utilgængelighed og en rigtig fejl — så det eneste, der skiller dem
+# ad, er at prøve igen.
+#
+# Tre forsøg, 5 og derefter 10 sekunder imellem. Loftet er der, fordi en
+# ProcessError stadig SKAL komme, når GO er nede for alvor: et brev, der ikke
+# kom på sagen, må ikke se ud som om det gjorde, og emnet skal fejle synligt
+# frem for at hænge i kø og vente på en server, der ikke kommer tilbage.
+_FORSOEG = 3
+_PAUSE_SEKUNDER = (5, 10)
 
 
 def _credentials() -> tuple[str, str, str]:
@@ -45,6 +60,70 @@ def _credentials() -> tuple[str, str, str]:
         )
 
 
+def _kald_go(beskrivelse: str, funktion, *args):
+    """Kald GO, og prøv igen hvis svaret er en serverfejl.
+
+    Args:
+        beskrivelse:
+            Hvad kaldet gør, som det skal stå i loggen ved et nyt forsøg.
+
+        funktion:
+            GO-funktionen fra mbu_dev_shared_components.
+
+        *args:
+            Argumenterne til den.
+
+    Returns:
+        Svaret fra det sidste forsøg. Kalderen afgør selv, om det er godt nok
+        — den her rejser ikke på et dårligt svar, den prøver bare igen.
+
+    Notes:
+        KUN 5xx og netværksfejl prøves igen. En 4xx er deterministisk — et
+        forkert kodeord, en sag der ikke findes, et dokument der er låst — og
+        det svar bliver det samme om ti sekunder. At vente på det ville kun
+        udskyde den fejl, en sagsbehandler skal se.
+
+        Lagt om det enkelte HTTP-kald frem for om journaliser_brev som helhed.
+        Slår journaliseringen fejl, er dokumentet allerede uploadet, og et nyt
+        forsøg på HELE funktionen ville uploade det igen og hente
+        legitimationen igen. Her prøves kun det kald, der faktisk fejlede.
+    """
+
+    for forsoeg in range(1, _FORSOEG + 1):
+        sidste_forsoeg = forsoeg == _FORSOEG
+
+        try:
+            svar = funktion(*args)
+        except requests.RequestException as fejl:
+            # Timeout, afbrudt forbindelse, DNS. Samme slags flakken som en
+            # 500, og uden et svar at kigge på.
+            if sidste_forsoeg:
+                raise
+
+            grund = f"{type(fejl).__name__}: {fejl}"
+        else:
+            if svar.status_code < 500:
+                return svar
+
+            if sidste_forsoeg:
+                return svar
+
+            grund = f"{svar.status_code} — {svar.text[:200]}"
+
+        pause = _PAUSE_SEKUNDER[min(forsoeg - 1, len(_PAUSE_SEKUNDER) - 1)]
+
+        logger.warning(
+            "%s fejlede (%s). Prøver igen om %d sekunder (forsøg %d af %d).",
+            beskrivelse,
+            grund,
+            pause,
+            forsoeg + 1,
+            _FORSOEG,
+        )
+
+        time.sleep(pause)
+
+
 def journaliser_brev(
     case_id: str,
     file_name: str,
@@ -60,6 +139,13 @@ def journaliser_brev(
     overwrite=true: filnavnet indeholder allerede datoen, så to breve til det
     samme barn samme dag ER det samme brev lavet om. Uden overwrite ville det
     andet forsøg fejle i stedet for at erstatte.
+
+    Det er også dét, der gør _kald_go's gentagelse ufarlig på uploaden. En 500
+    fortæller ikke, om dokumentet nåede at blive oprettet, så et nyt forsøg kan
+    ramme en fil, der allerede ligger der. Med overwrite bliver den erstattet
+    af den samme fil; uden ville gentagelsen enten fejle eller lægge brevet på
+    sagen to gange. Journaliseringen har samme egenskab af sig selv: at markere
+    et dokument som sagsakt, der allerede ER markeret, ændrer ingenting.
 
     Rejser ved fejl frem for at logge og gå videre: et brev, der ikke kom på
     sagen, må ikke se ud som om det gjorde.
@@ -83,8 +169,13 @@ def journaliser_brev(
         list(file_bytes),
     )
 
-    svar = documents.upload_file_to_case(
-        document_data, f"{endpoint}{_UPLOAD_PATH}", brugernavn, kodeord
+    svar = _kald_go(
+        f"Upload af {file_name!r} til sag {case_id}",
+        documents.upload_file_to_case,
+        document_data,
+        f"{endpoint}{_UPLOAD_PATH}",
+        brugernavn,
+        kodeord,
     )
 
     if not svar.ok:
@@ -97,8 +188,13 @@ def journaliser_brev(
 
     logger.info("Brevet er lagt på sag %s i GO som DocId %s.", case_id, doc_id)
 
-    svar = documents.mark_file_as_case_record(
-        [doc_id], f"{endpoint}{_JOURNALISER_PATH}", brugernavn, kodeord
+    svar = _kald_go(
+        f"Journalisering af DocId {doc_id} på sag {case_id}",
+        documents.mark_file_as_case_record,
+        [doc_id],
+        f"{endpoint}{_JOURNALISER_PATH}",
+        brugernavn,
+        kodeord,
     )
 
     if not svar.ok:
