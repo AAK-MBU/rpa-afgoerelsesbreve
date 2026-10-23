@@ -6,21 +6,38 @@ from helpers import helper_functions
 def _format_koerselsraekke(data: dict) -> str:
     """
     Format a single kørselsrække, e.g.:
-        "Skånekørsel mellem hjem og skole [mandag, onsdag, fredag] fra 01-03-2026 til 01-07-2027"
+        "Skånekørsel fast forsæde mellem hjem og skole 12,5 km pr. vej
+         [mandag, onsdag, fredag] fra 01-03-2026 til 01-07-2027"
 
-    - Rutetype follows the kørselstype (lowercased) whenever it is filled.
-    - Weekdays follow in brackets (lowercased), omitted when "Alle".
+    The order is Befordring's, from the "Flere kørselstyper" row of their
+    template sheet:
 
-    Rutetype sits where TIDSPUNKT used to. Befordring's own note on the
-    restructure says why: "Tidspunkt er blevet overflødigt med ovenstående
-    formuleringer" — the six rutetype names state where a trip starts and
-    ends, and therefore when it happens. "Fra hjem til skole" IS the morning;
-    "Mellem hjem og skole" is both legs. Printing both would say the same
-    thing twice, and tidspunkt is on its way out of the database.
+        {koerselstype} {tillæg} {tidspunkt} [{bevilget_koereafstand_pr_vej}
+        km pr. vej] [{dage}] fra {koersel_startdato} til {koerselstype_slutdato}
 
-    The kørselstype keeps its capital: every row is a bullet starting its own
-    line. It was lowercased once, for a one-row sentence that ran on from
-    "i form af" — that variant no longer exists.
+    EVERY part between the kørselstype and the dates is conditional. Only the
+    type and the period are always known; a række may carry no tillæg, no
+    rutetype, no distance, and "Alle" for its days. Each segment therefore
+    carries its own leading space and collapses to "" when it has nothing to
+    say, rather than being joined — joining is what leaves double spaces and
+    stray brackets in a letter a family reads.
+
+    Rutetype sits where TIDSPUNKT stands in the sheet. Befordring's own note
+    on the restructure says why: "Tidspunkt er blevet overflødigt med
+    ovenstående formuleringer" — the six rutetype names state where a trip
+    starts and ends, and therefore when it happens. "Fra hjem til skole" IS
+    the morning; "Mellem hjem og skole" is both legs. Printing both would say
+    the same thing twice, and tidspunkt is on its way out of the database.
+
+    Tillæg, rutetype and dage are lowercased because they sit inside a
+    sentence. The kørselstype keeps its capital: every row is a bullet
+    starting its own line. It was lowercased once, for a one-row sentence that
+    ran on from "i form af" — that variant no longer exists.
+
+    The tillæg here is NOT a duplicate of block 6.2. This states what was
+    granted; 6.2 appends a paragraph explaining what each tillæg means. The
+    two are the same word doing different jobs, and 6.2 de-duplicates across
+    rækker where this is deliberately per-række.
     """
 
     koerselstype = (
@@ -31,18 +48,41 @@ def _format_koerselsraekke(data: dict) -> str:
 
     start = helper_functions.format_danish_date(data.get("bevilling_fra"))
     slut = helper_functions.format_danish_date(data.get("bevilling_til"))
+    tillaeg = data.get("koerselstype_tillaeg")
     rutetype = data.get("rutetype")
     dage = data.get("dage")
+
+    # Already a comma-separated list per række — view_Letter_Koerselsraekker
+    # STRING_AGGs the tillæg link table — so it needs no joining here.
+    tillaeg_text = ""
+    if tillaeg and str(tillaeg).strip():
+        tillaeg_text = f" {str(tillaeg).strip().lower()}"
 
     rutetype_text = ""
     if rutetype:
         rutetype_text = f" {rutetype.lower()}"
 
+    # Zero is treated as absent, not as a distance.
+    #
+    # It is the value a række carries when no distance applies — a cykelbus
+    # række is the known case, and the same 0 once made block 6 pick the
+    # cykelbus over a 36,1 km egen befordring række and report "opgjort til
+    # 0 km". "0 km pr. vej" in an afgørelsesbrev is a statement about the
+    # family's journey, and it would be a false one.
+    km_text = ""
+    km = helper_functions.format_danish_number(data.get("bevilget_koereafstand_pr_vej"))
+
+    if km and km not in ("0", "0,0"):
+        km_text = f" {km} km pr. vej"
+
     dage_text = ""
     if dage and dage.lower() != "alle":
         dage_text = f" [{dage.lower()}]"
 
-    return f"{koerselstype}{rutetype_text}{dage_text} fra {start} til {slut}"
+    return (
+        f"{koerselstype}{tillaeg_text}{rutetype_text}{km_text}{dage_text}"
+        f" fra {start} til {slut}"
+    )
 
 
 def handle_custom_koerselstyper(item_data: dict, block: dict):
