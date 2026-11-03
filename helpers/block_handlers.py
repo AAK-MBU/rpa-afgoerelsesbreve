@@ -177,16 +177,80 @@ def handle_custom_koerselstyper(item_data: dict, block: dict):
     return block
 
 
-# The klub whose text differs from the generic SFO text. Compared
-# case-insensitively against the item_data["institution"] value.
+# The klub whose block 4 text differs from the generic SFO text. Matched
+# against the FOLDED institution value, so neither spelling nor word order in
+# the source has to be guessed at: the field is free text from the source
+# system and spells this one place at least two ways —
+#
+#     "Holme Søndergård - Klub og STU"
+#     "Klubben Holme Søndergaard"
+#
+# Only the place name is a marker. A generic "klub" marker is deliberately NOT
+# here, unlike _KLUB_MARKERS in
+# rpa-befordring-konvertering-af-ppr-sager/processes/queue_handler.py, which
+# scans free-text fields to decide whether a klub is involved AT ALL. This
+# decides WHICH TEXT a letter gets, and the klub entry is Holme Søndergård's
+# own wording — another klub matching on "klub" would be sent a letter about
+# an institution it has nothing to do with.
+_KLUB_MARKERS: tuple[str, ...] = (
+    "Holme Søndergård",
+)
+
+def _fold(value: str | None) -> str:
+    """Casefold, strip spaces, and flatten æ/ø/å for a tolerant contains-match.
+
+    "Søndergård" and "Søndergaard" are the same place written two ways, and
+    the source spells it both. Folding both sides means a marker matches
+    either without every spelling having to be listed.
+
+    Same helper, same rules, as _fold in
+    rpa-befordring-konvertering-af-ppr-sager/processes/queue_handler.py.
+    """
+
+    folded = "".join(str(value or "").split()).casefold()
+
+    for special, plain in (("æ", "ae"), ("ø", "oe"), ("å", "aa")):
+        folded = folded.replace(special, plain)
+
+    return folded
 
 
-def _find_entry_key(entries: dict, token: str):
-    """Return the first entry key that contains `token` (case-insensitive)."""
+def _naevner(value: str | None, markers: tuple[str, ...]) -> bool:
+    """Whether the folded value contains any of the folded markers."""
 
-    for key in entries:
-        if token in key.strip().lower():
-            return key
+    folded = _fold(value)
+
+    return any(_fold(marker) in folded for marker in markers)
+
+
+def _find_entry_key(entries: dict, *tokens: str):
+    """Return the entry key matching the earliest of `tokens`, folded.
+
+    Blok 4's keys, as the template sheet holds them today:
+
+        "Klubben Holme Søndergaard"
+        "SFO"
+
+    so "klubben" and "sfo" both land. The extra tokens are there because those
+    keys are Befordring's own wording in an Excel sheet they maintain, and a
+    key this function fails to match yields None and drops the block from the
+    letter without an error — which is half of what brought us here. Renaming
+    the klub entry to the institution's own text, or shortening it to "Klub",
+    is an edit a caseworker could reasonably make without ever learning it
+    silently stopped the klub text from being written.
+
+    `tokens` is a PREFERENCE ORDER, not a set: every key is tried against the
+    first token before any key is tried against the second. Otherwise a later,
+    looser token could claim a key that an earlier, more specific one was
+    meant for, and which entry won would depend on dict order.
+    """
+
+    for token in tokens:
+        folded_token = _fold(token)
+
+        for key in entries:
+            if folded_token in _fold(key):
+                return key
 
     return None
 
@@ -195,18 +259,30 @@ def handle_custom_institution(item_data: dict, block: dict):
     """Handle Blok 4 (institution — SFO / klub).
 
     item_data["institution"] holds the institution the student is attached to
-    (e.g. "SFO - Holme Skole" or "Klubben Holme Søndergaard"), or is empty when
-    the student has no SFO/klub. A plain has_value check is no longer enough,
-    because the block now has two different texts (SFO vs. Klubben Holme
-    Søndergaard). Rules:
+    (e.g. "SFO - Holme Skole" or "Holme Søndergård - Klub og STU"), or is
+    empty when the student has no SFO/klub. A plain has_value check is not
+    enough, because the block has two different texts. Rules:
 
     - Afslag -> nothing. We never grant SFO/klub transport in a rejection.
     - No institution value -> nothing.
     - No kørselsrække marked "Kørsel til institution: Ja" -> nothing. The
       student may well have an SFO, but if no granted kørsel goes there the
       letter should not say anything about it.
-    - institution names "Klubben Holme Søndergaard" -> the klub entry.
-    - institution has any other value -> the generic SFO entry.
+    - institution names Holme Søndergård -> the klub entry.
+    - any other institution -> the generic SFO entry.
+
+    So the SFO text is the DEFAULT and Holme Søndergård is the single
+    exception. The two guards above carry the weight: a student with no
+    institution, or whose granted kørsel does not go to it, never reaches the
+    selection at all. Past that point the student has an institution and is
+    driven to it, and the SFO text is what Befordring wants written about
+    every institution but one.
+
+    Deliberately not narrowed to names containing "SFO". The field is free
+    text from the source system — "SFO - Holme Skole" is one shape it takes,
+    not the only one — and a fritidshjem or specialtilbud failing such a test
+    would lose the block silently, which is the failure mode this handler was
+    brought back here to fix.
 
     Selection sets block["mapping"] to the matching entry key so the "custom"
     renderer appends that entry's text (or nothing when mapping is None).
@@ -221,10 +297,10 @@ def handle_custom_institution(item_data: dict, block: dict):
 
     entries = block.get("entries", {})
 
-    # Lower-case both sides for a lenient comparison, per the field's free-text
-    # institution names.
+    # Fold both sides for a lenient contains-match, per the field's free-text
+    # institution names. See _fold.
     institution_value = (item_data.get("institution") or "").strip()
-    normalized_institution = institution_value.lower()
+    folded_institution = _fold(institution_value)
 
     # Two conditions have to hold before the SFO/klub text goes in the letter:
     # the student must HAVE an institution, and the granted kørsel must actually
@@ -247,17 +323,20 @@ def handle_custom_institution(item_data: dict, block: dict):
     if (
         afgoerelsesbrev_decision == "Afslag"
         or not institution_value
-        or normalized_institution == "nej"
+        or folded_institution == "nej"
         or not koersel_til_institution
     ):
         block["mapping"] = None
 
         return block
 
-    klubben_holme = "klubben holme søndergaard"
-
-    if klubben_holme in normalized_institution:
-        block["mapping"] = _find_entry_key(entries, "klubben")
+    # One exception, one default. Holme Søndergård has its own text; every
+    # other institution gets the SFO text. Befordring's rule, and the reason
+    # the fallback is NOT narrowed to names containing "SFO": the field is
+    # free text from the source system, so a fritidshjem or a specialtilbud
+    # would fall through such a test and lose the block without an error.
+    if _naevner(institution_value, _KLUB_MARKERS):
+        block["mapping"] = _find_entry_key(entries, "klubben", "Holme Søndergård", "klub")
 
     else:
         block["mapping"] = _find_entry_key(entries, "sfo")

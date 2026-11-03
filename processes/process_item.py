@@ -6,10 +6,10 @@ import json
 import logging
 import re
 
-import requests
+# import requests
 
 
-from helpers import config, go_journalisering, helper_functions, block_handlers
+from helpers import go_journalisering, helper_functions, block_handlers
 # 🔥 TEMPORARY - remove together with helpers/mock_skabelonmotor.py when the API is live
 from helpers import mock_skabelonmotor
 
