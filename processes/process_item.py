@@ -327,7 +327,6 @@ def process_item(item_data: dict, item_reference: str):
         ],
         "custom_key": {
             "1.1": item_data.get("brev_i_forbindelse_med"),
-            "2.2": item_data.get("befordringsudvalg_resultat"),
             "5": afgoerelsesbrev_decision,
             # Block 8's only entry is keyed on the bare word "Påtænkt", but the
             # decision is always "Påtænkt afslag" / "Påtænkt ophør" / "Påtænkt
@@ -430,7 +429,6 @@ def process_item(item_data: dict, item_reference: str):
         "koersel_startdato",
         "koersel_slutdato",
         "dato_for_seneste_bevilling",
-        "dato_for_tidligere_afgoerelse",
         "ophoersdato",
     )
 
