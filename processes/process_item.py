@@ -429,7 +429,6 @@ def process_item(item_data: dict, item_reference: str):
         "koersel_startdato",
         "koersel_slutdato",
         "dato_for_seneste_bevilling",
-        "dato_for_tidligere_afgoerelse",
         "ophoersdato",
     )
 
