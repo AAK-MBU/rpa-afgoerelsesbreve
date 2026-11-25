@@ -303,8 +303,90 @@ def process_item(item_data: dict, item_reference: str):
         item_data["koerselsgodtgoerelse_modtager"] = ""
         item_data["koerselsgodtgoerelse_modtager_cpr"] = ""
 
-    # We create 2 custom variables, used as custom keys to correctly handle block 9.1 and 9.2 in the template text data
-    if "midlertidig" in str(afgoerelsesbrev).lower():
+    # Midlertidig kørsel (brækket ben) overrules block 6.1's kørselstype text.
+    #
+    # Block 6.1 normally picks its text from the KØRSELSTYPE: the engine looks
+    # the granted type up among the entry keys in column A — "Rutekørsel",
+    # "Skolerejsekort", "Egen befordring". A brækket ben-bevilling is granted
+    # one of those same types, but the family is told something quite
+    # different: no kørsel to hospital or doctor, afbestilling by 12.00 the
+    # day before, SMS service, no replacement taxa after a forgæves tur. So
+    # the sheet carries two further entries, which column C marks as covering
+    # those same three kørselstyper:
+    #
+    #     Brækket ben (ungdomsuddannelse)   § 10
+    #     Brækket ben (folkeskole)          § 26, stk. 2
+    #
+    # Nothing ever selected them. No kørselstype is named "Brækket ben
+    # (folkeskole)", so the lookup could not reach either row, and every
+    # midlertidig letter printed the ordinary kørselstype text instead.
+    #
+    # Passing the entry key as a custom_key switches block 6.1 from "equals"
+    # (list of kørselstyper) to "custom" (one exact entry key), which is what
+    # lets the afgørelsesbrev overrule the kørselstype for these letters only.
+    #
+    # Matched on the school form rather than on the paragraph — see
+    # er_midlertidig_folkeskole / _ungdomsuddannelse just below. The paragraph
+    # is the part that gets renumbered, and the two sources do not even spell
+    # the word the same way: Afgoerelsesbrev says "ungdomssuddannelse" with a
+    # double s, the sheet says "ungdomsuddannelse". The prefix "ungdoms"
+    # covers both. Both flags require the letter to be midlertidig, so
+    # "Afslag: § 33, stk. 3 (ungdomsskolen)" cannot fall in here.
+    #
+    # None for every other letter, which leaves block 6.1 on its default
+    # "equals" condition and the kørselstype behaviour untouched — the same
+    # arrangement block 8 uses.
+    #
+    # None for an afslag or an ophør too, and that one is not cosmetic. The
+    # FAIL-SAFE at the top empties koerselsraekker, which is what the "equals"
+    # lookup reads — that is how block 6 is kept off a letter that refuses or
+    # ends kørsel. A custom_key does not read them at all, so without this
+    # guard the override would walk straight past the fail-safe and tell a
+    # refused family how to cancel the taxa they were just denied.
+    afgoerelsesbrev_lower = str(afgoerelsesbrev or "").lower()
+
+    er_midlertidig = "midlertidig" in afgoerelsesbrev_lower
+
+    # WHICH law the midlertidig kørsel rests on, which is the whole point of
+    # the distinction. § 10 is lov om befordringsrabat til uddannelsessøgende
+    # i ungdomsuddannelser; § 26, stk. 2 is folkeskoleloven, the same law as
+    # every ordinary bevilling. Blocks 9.1 and 9.2 below turn on this, and
+    # they are the parts of the letter that cite legislation by name.
+    er_midlertidig_ungdomsuddannelse = er_midlertidig and "ungdoms" in afgoerelsesbrev_lower
+    er_midlertidig_folkeskole = er_midlertidig and "folkeskole" in afgoerelsesbrev_lower
+
+    braekket_ben_entry = None
+
+    if not afviser_eller_afslutter:
+        if er_midlertidig_folkeskole:
+            braekket_ben_entry = "Brækket ben (folkeskole)"
+
+        elif er_midlertidig_ungdomsuddannelse:
+            braekket_ben_entry = "Brækket ben (ungdomsuddannelse)"
+
+    # Blocks 9.1 and 9.2 — klagevejledning and retsgrundlag.
+    #
+    # Both used to key off the bare word "midlertidig", which sent EVERY
+    # midlertidig letter to the ungdomsuddannelse entry. A § 26, stk. 2
+    # (brækket ben folkeskole) letter was therefore told it could not appeal
+    # under "lov om befordringsrabat til uddannelsessøgende i
+    # ungdomsuddannelser § 16, stk. 1", and was given that same act as its
+    # retsgrundlag. Neither applies to a folkeskole pupil: § 26, stk. 2 IS
+    # folkeskoleloven, so the appeal route is folkeskolelovens § 51, stk. 2 —
+    # the standard text — and the retsgrundlag is folkeskoleloven with the
+    # befordringsbekendtgørelse.
+    #
+    # So the folkeskole letters fall through to the standard entries, which
+    # is both the correct law and what block 9.1 already does for the other
+    # § 26, stk. 2 letters (sygdom, frit skolevalg, retten til at forblive).
+    #
+    # The sheet has no folkeskole-specific brækket ben entry in either block,
+    # and column C lists the midlertidig folkeskole breve nowhere at all. If
+    # Befordring wants wording that says "midlertidig befordring" for a
+    # folkeskole pupil, that is a new row in each block plus a branch here —
+    # until then the standard text is right, where the ungdomsuddannelse text
+    # was wrong.
+    if er_midlertidig_ungdomsuddannelse:
         klagevejledning = "Klagevejledning brækket ben ungdomsuddannelse"
 
     else:
@@ -313,7 +395,7 @@ def process_item(item_data: dict, item_reference: str):
     if afgoerelsesbrev == "Afslag: § 33, stk. 3 (ungdomsskolen)":
         regler = "Regler § 33, stk. 3 (ungdomsskoleloven)"
 
-    elif "midlertidig" in str(afgoerelsesbrev).lower():
+    elif er_midlertidig_ungdomsuddannelse:
         regler = "Regler brækket ben ungdomssuddanelse"
 
     else:
@@ -327,6 +409,9 @@ def process_item(item_data: dict, item_reference: str):
         ],
         "custom_key": {
             "1.1": item_data.get("brev_i_forbindelse_med"),
+            # Only set for a brækket ben-bevilling — see above. None leaves
+            # block 6.1 picking on the kørselstype as it always has.
+            "6.1": braekket_ben_entry,
             "5": afgoerelsesbrev_decision,
             # Block 8's only entry is keyed on the bare word "Påtænkt", but the
             # decision is always "Påtænkt afslag" / "Påtænkt ophør" / "Påtænkt
